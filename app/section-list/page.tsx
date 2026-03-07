@@ -17,6 +17,10 @@ export default function SectionListPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const [isFetching, setIsFetching] = useState(true);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Section | null>(null);
+  const [deleteError, setDeleteError] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     const initialize = async () => {
@@ -56,17 +60,35 @@ export default function SectionListPage() {
     setName("");
   };
 
-  const handleDelete = async (id: string) => {
-    const ok = confirm("Delete this section?");
-    if (!ok) return;
+  const handleDelete = (section: Section) => {
+    setDeleteError("");
+    setDeleteTarget(section);
+    setDeleteModalOpen(true);
+  };
 
-    const { error: delError } = await deleteSection(id);
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleteLoading(true);
+    setDeleteError("");
+
+    const { error: delError } = await deleteSection(deleteTarget.id);
+    setDeleteLoading(false);
+
     if (delError) {
-      setError(delError.message);
+      const msg =
+        delError.message ??
+        "Failed to delete section. It may have dependent students.";
+      setDeleteError(
+        /foreign|dependen|constraint/i.test(msg)
+          ? "Cannot delete section: there are students assigned to this section."
+          : msg,
+      );
       return;
     }
 
-    setSections((current) => current.filter((s) => s.id !== id));
+    setSections((current) => current.filter((s) => s.id !== deleteTarget.id));
+    setDeleteModalOpen(false);
+    setDeleteTarget(null);
   };
 
   const startEdit = (section: Section) => {
@@ -178,7 +200,7 @@ export default function SectionListPage() {
                   <div className="flex items-center justify-end">
                     <button
                       type="button"
-                      onClick={() => handleDelete(section.id)}
+                      onClick={() => handleDelete(section)}
                       title="Delete section"
                       className="rounded p-1 text-zinc-500 hover:bg-zinc-100 hover:text-red-600"
                     >
@@ -201,6 +223,47 @@ export default function SectionListPage() {
           </div>
         </div>
       </section>
+
+      {deleteModalOpen && deleteTarget ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-xl border border-zinc-200 bg-white p-4 shadow-lg">
+            <h3 className="text-lg font-semibold text-zinc-900">Delete section</h3>
+            <p className="mt-3 text-sm text-zinc-700">
+              Are you sure you want to delete <span className="font-medium">{deleteTarget.name}</span>?
+              This action cannot be undone.
+            </p>
+            {deleteError ? (
+              <p className="mt-3 text-sm text-red-600">{deleteError}</p>
+            ) : (
+              <p className="mt-3 text-sm text-zinc-500">
+                If this section has students assigned, deletion will fail and an error will be shown.
+              </p>
+            )}
+
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteModalOpen(false);
+                  setDeleteTarget(null);
+                  setDeleteError("");
+                }}
+                className="flex-1 rounded-md border border-zinc-200 px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                disabled={deleteLoading}
+                className="flex-1 rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {deleteLoading ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
