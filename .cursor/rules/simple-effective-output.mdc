@@ -1,0 +1,26 @@
+---
+description: Keep AI code output plain, simple, and effective
+alwaysApply: true
+---
+
+# Simple, Effective Code Output
+
+When generating or editing code in this project:
+
+- Prefer **plain, simple, “obvious” solutions** over clever ones.
+- Keep diffs **small and focused** (touch as few files and lines as necessary).
+- **Reuse existing patterns** in the codebase instead of introducing new abstractions.
+- Avoid new layers (services, repositories, factories, etc.) unless there are **at least two real call sites**.
+- Keep logic **close to where it’s used** unless it is clearly reused.
+- Favor **direct data flows** (props, simple context/hooks) over global state or complex indirection.
+- Use **clear, descriptive names** for variables, components, hooks, and types.
+- Keep TypeScript usage **practical and strict**: avoid `any`, but don’t over-genericize.
+- Do not add comments that only restate what the code already makes obvious.
+- Match the existing **styling, imports, and file layout** of nearby code.
+
+Examples:
+
+- ✅ Good: Wrap a screen with a small provider and read data via a simple hook.
+- ✅ Good: Replace a hardcoded array with a typed mock array imported from a single mock file.
+- ❌ Avoid: Introducing new global state management or complex architectural patterns for simple screens.
+
