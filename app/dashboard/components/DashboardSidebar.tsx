@@ -9,7 +9,7 @@ type Props = {
   onSelect: (item: string) => void;
 };
 
-const navItems = ["Dashboard", "Students List"];
+const navItems = ["Dashboard", "Students List", "Sections"];
 
 export default function DashboardSidebar({ active, onSelect }: Props) {
   const router = useRouter();
@@ -42,55 +42,55 @@ export default function DashboardSidebar({ active, onSelect }: Props) {
   return (
     <>
       <aside className="flex h-full w-64 flex-none flex-col overflow-hidden border-r border-zinc-200 bg-white">
-      <div className="px-4 py-5">
-        <div className="flex items-center gap-3">
-          <div className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-600 text-sm font-semibold text-white">
-            ••
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-zinc-800">
-              Roadshow Attendance
-            </p>
-            <p className="text-xs text-zinc-500">RouteLedger</p>
+        <div className="px-4 py-5">
+          <div className="flex items-center gap-3">
+            <div className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-600 text-sm font-semibold text-white">
+              ••
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-zinc-800">
+                Roadshow Attendance
+              </p>
+              <p className="text-xs text-zinc-500">RouteLedger</p>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="px-4">
-        <p className="mb-2 text-[10px] font-medium tracking-wide text-zinc-400 uppercase">
-          Menu
-        </p>
-        <ul className="space-y-1">
-          {navItems.map((item) => {
-            const isActive = item === active;
+        <div className="px-4">
+          <p className="mb-2 text-[10px] font-medium tracking-wide text-zinc-400 uppercase">
+            Menu
+          </p>
+          <ul className="space-y-1">
+            {navItems.map((item) => {
+              const isActive = item === active;
 
-            return (
-              <li
-                key={item}
-                onClick={() => onSelect(item)}
-                className={`cursor-pointer rounded-lg px-3 py-2 text-sm select-none ${
-                  isActive
-                    ? "bg-emerald-50 font-medium text-emerald-700"
-                    : "text-zinc-600 hover:bg-zinc-50"
-                }`}
-              >
-                {item}
-              </li>
-            );
-          })}
-        </ul>
-      </div>
+              return (
+                <li
+                  key={item}
+                  onClick={() => onSelect(item)}
+                  className={`cursor-pointer rounded-lg px-3 py-2 text-sm select-none ${
+                    isActive
+                      ? "bg-emerald-50 font-medium text-emerald-700"
+                      : "text-zinc-600 hover:bg-zinc-50"
+                  }`}
+                >
+                  {item}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
 
-      <div className="mt-auto border-t border-zinc-200 p-4">
-        <button
-          type="button"
-          onClick={() => setIsModalOpen(true)}
-          className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-left hover:bg-zinc-100"
-        >
-          <p className="text-sm font-medium text-zinc-800">{userEmail}</p>
-          <p className="text-xs text-zinc-500">View profile and sign out</p>
-        </button>
-      </div>
+        <div className="mt-auto border-t border-zinc-200 p-4">
+          <button
+            type="button"
+            onClick={() => setIsModalOpen(true)}
+            className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-left hover:bg-zinc-100"
+          >
+            <p className="text-sm font-medium text-zinc-800">{userEmail}</p>
+            <p className="text-xs text-zinc-500">View profile and sign out</p>
+          </button>
+        </div>
       </aside>
 
       {isModalOpen ? (

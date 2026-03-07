@@ -1,13 +1,12 @@
- "use client";
+"use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import DashboardSidebar from "./components/DashboardSidebar";
 import SimpleTableCard, { type TableRow } from "./components/SimpleTableCard";
 import StatCardsRow from "./components/StatCardsRow";
 import AlertsCard, { type AlertRow } from "./components/AlertsCard";
-import StudentsList from "./student-list/StudentsList";
-import { createClient } from "@/utils/supabase/client";
+import StudentsList from "../student-list/StudentsList";
+import SectionListPage from "../section-list/page";
 
 const topProductsRows: TableRow[] = [
   { label: "Pandesal (12pc)", value: "56", amount: "₱3,080" },
@@ -31,20 +30,6 @@ const varianceAlerts: AlertRow[] = [
 
 export default function DashboardPage() {
   const [active, setActive] = useState<string>("Dashboard");
-  const router = useRouter();
-
-  useEffect(() => {
-    const supabase = createClient();
-
-    const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) {
-        router.replace("/auth/login");
-      }
-    };
-
-    checkSession();
-  }, [router]);
 
   return (
     <div className="h-screen bg-[#f5f6f8] font-sans text-zinc-900">
@@ -54,12 +39,18 @@ export default function DashboardPage() {
         <main className="flex-1 p-6 xl:p-8 flex flex-col overflow-hidden">
           <header className="mb-5 flex-none">
             <h1 className="text-[42px] leading-none font-semibold tracking-tight text-zinc-900">
-              {active === "Dashboard" ? "Dashboard" : "Students List"}
+              {active === "Dashboard"
+                ? "Dashboard"
+                : active === "Students List"
+                  ? "Students List"
+                  : "Section List"}
             </h1>
             <p className="mt-1 text-sm text-zinc-500">
               {active === "Dashboard"
                 ? "Control center - not analytics."
-                : "Manage students and attendance."}
+                : active === "Students List"
+                  ? "Manage students and attendance."
+                  : "Create and manage sections."}
             </p>
           </header>
 
@@ -70,7 +61,9 @@ export default function DashboardPage() {
 
                 <section className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[3fr_1.4fr]">
                   <div className="h-[330px] rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
-                    <h2 className="text-lg font-semibold text-zinc-800">Project Analytics</h2>
+                    <h2 className="text-lg font-semibold text-zinc-800">
+                      Project Analytics
+                    </h2>
                     <div className="flex h-full items-center justify-center pb-10">
                       <p className="text-5xl font-semibold lowercase tracking-tight text-zinc-700">
                         attendance
@@ -78,16 +71,24 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  <SimpleTableCard title="Top 5 products sold" rows={topProductsRows} />
+                  <SimpleTableCard
+                    title="Top 5 products sold"
+                    rows={topProductsRows}
+                  />
                 </section>
 
                 <section className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[1.7fr_1.3fr]">
-                  <SimpleTableCard title="Top 5 BO products" rows={boProductsRows} />
+                  <SimpleTableCard
+                    title="Top 5 BO products"
+                    rows={boProductsRows}
+                  />
                   <AlertsCard title="Variance alerts" rows={varianceAlerts} />
                 </section>
               </>
-            ) : (
+            ) : active === "Students List" ? (
               <StudentsList />
+            ) : (
+              <SectionListPage />
             )}
           </div>
         </main>
