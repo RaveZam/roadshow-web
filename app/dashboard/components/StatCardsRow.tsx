@@ -1,22 +1,13 @@
-type StatCard = {
-  label: string;
-  value: string;
-  note: string;
-  highlighted?: boolean;
+import { type DashboardStatCard } from "../services/dashboardMetrics";
+
+type StatCardsRowProps = {
+  cards: DashboardStatCard[];
 };
 
-const statCards: StatCard[] = [
-  { label: "Total Sales Today", value: "₱10,105", note: "Sold 191 qty", highlighted: true },
-  { label: "Total BO Today", value: "39", note: "₱1,715" },
-  { label: "Total Delivered Today", value: "242 pcs", note: "" },
-  { label: "BO Rate", value: "17.0%", note: "" },
-  { label: "Variance Today", value: "11 pcs", note: "₱330" },
-];
-
-export default function StatCardsRow() {
+export default function StatCardsRow({ cards }: StatCardsRowProps) {
   return (
     <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-      {statCards.map((card) => (
+      {cards.map((card) => (
         <article
           key={card.label}
           className={`rounded-xl border p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)] ${

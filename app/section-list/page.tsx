@@ -118,7 +118,7 @@ export default function SectionListPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#f5f6f8] p-6 xl:p-8">
+    <main className="min-h-screen bg-[#f5f6f8] ">
       <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
         <form className="mb-4 flex gap-2" onSubmit={onSubmit}>
           <input
@@ -149,10 +149,14 @@ export default function SectionListPage() {
             {isFetching ? (
               <div className="flex flex-col items-center justify-center py-6">
                 <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-200 border-t-emerald-600" />
-                <p className="mt-2 text-sm text-zinc-500">Loading sections...</p>
+                <p className="mt-2 text-sm text-zinc-500">
+                  Loading sections...
+                </p>
               </div>
             ) : sections.length === 0 ? (
-              <p className="px-3 py-4 text-sm text-zinc-500">No sections yet.</p>
+              <p className="px-3 py-4 text-sm text-zinc-500">
+                No sections yet.
+              </p>
             ) : (
               sections.map((section) => (
                 <div
@@ -227,16 +231,20 @@ export default function SectionListPage() {
       {deleteModalOpen && deleteTarget ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-md rounded-xl border border-zinc-200 bg-white p-4 shadow-lg">
-            <h3 className="text-lg font-semibold text-zinc-900">Delete section</h3>
+            <h3 className="text-lg font-semibold text-zinc-900">
+              Delete section
+            </h3>
             <p className="mt-3 text-sm text-zinc-700">
-              Are you sure you want to delete <span className="font-medium">{deleteTarget.name}</span>?
-              This action cannot be undone.
+              Are you sure you want to delete{" "}
+              <span className="font-medium">{deleteTarget.name}</span>? This
+              action cannot be undone.
             </p>
             {deleteError ? (
               <p className="mt-3 text-sm text-red-600">{deleteError}</p>
             ) : (
               <p className="mt-3 text-sm text-zinc-500">
-                If this section has students assigned, deletion will fail and an error will be shown.
+                If this section has students assigned, deletion will fail and an
+                error will be shown.
               </p>
             )}
 

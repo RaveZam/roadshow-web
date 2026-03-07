@@ -1,35 +1,52 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import DashboardSidebar from "./components/DashboardSidebar";
-import SimpleTableCard, { type TableRow } from "./components/SimpleTableCard";
 import StatCardsRow from "./components/StatCardsRow";
-import AlertsCard, { type AlertRow } from "./components/AlertsCard";
+import AlertsCard from "./components/AlertsCard";
 import StudentsList from "../student-list/StudentsList";
 import SectionListPage from "../section-list/page";
+import {
+  type DashboardMetrics,
+  fetchDashboardMetrics,
+} from "./services/dashboardMetrics";
 
-const topProductsRows: TableRow[] = [
-  { label: "Pandesal (12pc)", value: "56", amount: "₱3,080" },
-  { label: "Spanish Bread", value: "25", amount: "₱750" },
-  { label: "Cheese Bread", value: "21", amount: "₱840" },
-  { label: "Banana Bread Slice", value: "20", amount: "₱900" },
-  { label: "Ensaymada", value: "18", amount: "₱630" },
-];
+export type DayFilter = "all" | "day1" | "day2" | "day3";
 
-const boProductsRows: TableRow[] = [
-  { label: "Spanish Bread", value: "20", amount: "₱600" },
-];
-
-const varianceAlerts: AlertRow[] = [
-  {
-    title: "Ben • 2026-02-21",
-    details: "2 rows • BO 25 • variance 8",
-    badge: "v270",
-  },
-];
+const DAY_FILTER_LABELS: Record<DayFilter, string> = {
+  all: "All-Time",
+  day1: "Day 1",
+  day2: "Day 2",
+  day3: "Day 3",
+};
 
 export default function DashboardPage() {
   const [active, setActive] = useState<string>("Dashboard");
+  const [dayFilter, setDayFilter] = useState<DayFilter>("all");
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+  const [isLoadingMetrics, setIsLoadingMetrics] = useState(true);
+  const [metricsError, setMetricsError] = useState("");
+
+  useEffect(() => {
+    const loadMetrics = async () => {
+      setIsLoadingMetrics(true);
+      setMetricsError("");
+
+      const result = await fetchDashboardMetrics();
+      setIsLoadingMetrics(false);
+
+      if (result.error) {
+        setMetricsError(result.error.message);
+        return;
+      }
+
+      setMetrics(result.data);
+    };
+
+    if (active === "Dashboard") {
+      loadMetrics();
+    }
+  }, [active]);
 
   return (
     <div className="h-screen bg-[#f5f6f8] font-sans text-zinc-900">
@@ -47,7 +64,7 @@ export default function DashboardPage() {
             </h1>
             <p className="mt-1 text-sm text-zinc-500">
               {active === "Dashboard"
-                ? "Control center - not analytics."
+                ? "University attendance overview (3-day event)."
                 : active === "Students List"
                   ? "Manage students and attendance."
                   : "Create and manage sections."}
@@ -57,33 +74,99 @@ export default function DashboardPage() {
           <div className="flex-1 overflow-auto hide-scrollbar">
             {active === "Dashboard" ? (
               <>
-                <StatCardsRow />
+                <div className="mb-4 flex flex-wrap gap-2">
+                  {(Object.keys(DAY_FILTER_LABELS) as DayFilter[]).map((key) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setDayFilter(key)}
+                      className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+                        dayFilter === key
+                          ? "bg-emerald-600 text-white"
+                          : "border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
+                      }`}
+                    >
+                      {DAY_FILTER_LABELS[key]}
+                    </button>
+                  ))}
+                </div>
 
-                <section className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[3fr_1.4fr]">
-                  <div className="h-[330px] rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
-                    <h2 className="text-lg font-semibold text-zinc-800">
-                      Project Analytics
-                    </h2>
-                    <div className="flex h-full items-center justify-center pb-10">
-                      <p className="text-5xl font-semibold lowercase tracking-tight text-zinc-700">
-                        attendance
-                      </p>
-                    </div>
+                {metricsError ? (
+                  <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                    Failed to load dashboard metrics: {metricsError}
                   </div>
+                ) : null}
 
-                  <SimpleTableCard
-                    title="Top 5 products sold"
-                    rows={topProductsRows}
-                  />
-                </section>
+                {isLoadingMetrics ? (
+                  <div className="flex min-h-[240px] flex-col items-center justify-center rounded-xl border border-zinc-200 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-200 border-t-emerald-600" />
+                    <p className="mt-2 text-sm text-zinc-500">Loading attendance metrics...</p>
+                  </div>
+                ) : metrics ? (
+                  <>
+                    <StatCardsRow cards={metrics.statCards} />
 
-                <section className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[1.7fr_1.3fr]">
-                  <SimpleTableCard
-                    title="Top 5 BO products"
-                    rows={boProductsRows}
-                  />
-                  <AlertsCard title="Variance alerts" rows={varianceAlerts} />
-                </section>
+                    <section className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1.4fr]">
+                      <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+                        <div className="mb-4 flex items-center justify-between">
+                          <h2 className="text-lg font-semibold text-zinc-800">
+                            Daily Attendance Trend
+                          </h2>
+                          <p className="text-xs text-zinc-500">{metrics.eventWindowLabel}</p>
+                        </div>
+
+                        <div className="divide-y divide-zinc-100 rounded-lg border border-zinc-200">
+                          {metrics.trendRows.map((row) => (
+                            <div
+                              key={row.day}
+                              className="grid grid-cols-[1fr_auto_auto] items-center gap-4 px-3 py-3 text-sm text-zinc-700"
+                            >
+                              <p className="font-medium">{row.day}</p>
+                              <p>{row.checkedIn.toLocaleString()} checked in</p>
+                              <p className="text-xs text-zinc-500">{row.rate}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+                        <h2 className="text-lg font-semibold text-zinc-800">
+                          Top Sections by Attendance
+                        </h2>
+                        <div className="mt-4 divide-y divide-zinc-100 rounded-lg border border-zinc-200">
+                          {metrics.topSections.map((section) => (
+                            <div
+                              key={section.section}
+                              className="flex items-center justify-between px-3 py-3 text-sm text-zinc-700"
+                            >
+                              <p className="font-medium">{section.section}</p>
+                              <p>{section.checkedIn}</p>
+                              <p className="text-xs text-zinc-500">{section.rate}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </section>
+
+                    <section className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[1.7fr_1.3fr]">
+                      <AlertsCard title="Attendance Alerts" rows={metrics.alerts} />
+                      <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+                        <h2 className="text-lg font-semibold text-zinc-800">
+                          Recommended Actions
+                        </h2>
+                        <ul className="mt-4 space-y-2 text-sm text-zinc-600">
+                          <li>Coordinate with class leaders of low-turnout sections.</li>
+                          <li>Prioritize follow-up with at-risk students by section.</li>
+                          <li>Review Day 3 bottlenecks before the next university event.</li>
+                        </ul>
+                      </div>
+                    </section>
+                  </>
+                ) : (
+                  <div className="rounded-xl border border-zinc-200 bg-white p-4 text-sm text-zinc-600 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+                    No metrics available yet.
+                  </div>
+                )}
               </>
             ) : active === "Students List" ? (
               <StudentsList />
