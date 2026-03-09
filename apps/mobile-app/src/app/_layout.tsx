@@ -1,12 +1,14 @@
 import { DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
-import { Stack } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import React, { useEffect } from "react";
 import { Pressable, StyleSheet } from "react-native";
 import { AnimatedSplashOverlay } from "@/components/animated-icon";
 import bootstrapDatabase from "../../lib/sqlite/bootstrap";
 
 export default function TabLayout() {
+  const router = useRouter();
+
   useEffect(() => {
     bootstrapDatabase();
   }, []);
@@ -26,6 +28,7 @@ export default function TabLayout() {
             title: "Masterlist",
             headerRight: () => (
               <Pressable
+                onPress={() => router.push("/settings/SettingsPage")}
                 style={({ pressed }) => [
                   styles.headerButton,
                   pressed && styles.pressed,
@@ -42,6 +45,13 @@ export default function TabLayout() {
           options={{
             headerShown: true,
             title: "Student Data",
+          }}
+        />
+        <Stack.Screen
+          name="settings/SettingsPage"
+          options={{
+            headerShown: true,
+            title: "Settings",
           }}
         />
       </Stack>

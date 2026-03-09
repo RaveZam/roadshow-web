@@ -14,7 +14,7 @@ function LocalAttendanceNote() {
     <ThemedText type="small" style={styles.note}>
       This is only your local copy of attendance, previous date or future
       attendance record might be recorded from other Attendance takers. All data
-      is merged on the admin's side.
+      is merged on the admin&apos;s side.
     </ThemedText>
   );
 }
