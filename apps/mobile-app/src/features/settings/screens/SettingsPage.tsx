@@ -23,7 +23,10 @@ export default function SettingsPage() {
 
           <Pressable
             onPress={() => setShowFetchModal(true)}
-            style={({ pressed }) => [styles.actionButton, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.actionButton,
+              pressed && styles.pressed,
+            ]}
           >
             <ThemedText type="smallBold" style={styles.actionButtonText}>
               Fetch Students
@@ -37,7 +40,9 @@ export default function SettingsPage() {
 
         <ThemedView type="backgroundElement" style={styles.card}>
           <ThemedText type="smallBold">Sync</ThemedText>
-          <ThemedText type="small">Pending sync ({pendingSyncCount})</ThemedText>
+          <ThemedText type="small">
+            Pending sync ({pendingSyncCount})
+          </ThemedText>
         </ThemedView>
       </SafeAreaView>
 

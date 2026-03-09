@@ -28,7 +28,7 @@ export default function TabLayout() {
             title: "Masterlist",
             headerRight: () => (
               <Pressable
-                onPress={() => router.push("/settings/SettingsPage")}
+                onPress={() => router.push("../settings")}
                 style={({ pressed }) => [
                   styles.headerButton,
                   pressed && styles.pressed,
@@ -39,7 +39,7 @@ export default function TabLayout() {
             ),
           }}
         />
-        <Stack.Screen name="scan-qr" />
+        <Stack.Screen name="qr-section" />
         <Stack.Screen
           name="student-screen/[studentId]"
           options={{
@@ -48,7 +48,7 @@ export default function TabLayout() {
           }}
         />
         <Stack.Screen
-          name="settings/SettingsPage"
+          name="settings"
           options={{
             headerShown: true,
             title: "Settings",
