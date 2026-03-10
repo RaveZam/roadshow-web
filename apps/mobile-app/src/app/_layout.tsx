@@ -34,7 +34,7 @@ export default function TabLayout() {
                   pressed && styles.pressed,
                 ]}
               >
-                <Ionicons name="download-outline" size={24} color="#3f3f46" />
+                <Ionicons name="settings-outline" size={24} color="#3f3f46" />
               </Pressable>
             ),
           }}

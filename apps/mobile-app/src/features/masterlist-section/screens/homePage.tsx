@@ -92,7 +92,19 @@ export default function HomePage() {
                   pressed && styles.pressed,
                 ]}
               >
-                <Ionicons name="filter" size={22} color="#3f3f46" />
+                <ThemedText
+                  type="small"
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                  style={styles.filterButtonText}
+                >
+                  {selectedSection}
+                </ThemedText>
+                <Ionicons
+                  name={showFilter ? "chevron-up" : "chevron-down"}
+                  size={18}
+                  color="#3f3f46"
+                />
               </Pressable>
 
               {showFilter && (
@@ -159,7 +171,7 @@ export default function HomePage() {
         </ThemedView>
 
         <Pressable
-          onPress={() => router.push("/scan-qr")}
+          onPress={() => router.push("/qr-section")}
           style={({ pressed }) => [
             styles.scanButton,
             pressed && styles.pressed,
@@ -215,19 +227,34 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e4e4e7",
   },
-  filterWrapper: { width: 42 },
+  filterWrapper: {
+    minWidth: 42,
+    width: 120,
+    flexShrink: 0,
+    position: "relative",
+  },
   filterButton: {
-    width: 42,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 4,
+    minWidth: 42,
+    width: "100%",
+    minHeight: 42,
     height: 42,
     borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
+    paddingHorizontal: Spacing.two,
     backgroundColor: "#ffffff",
     borderWidth: 1,
     borderColor: "#e4e4e7",
   },
+  filterButtonText: { flex: 1, color: "#3f3f46" },
   dropdown: {
-    marginTop: Spacing.one,
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 42 + Spacing.one,
+    zIndex: 10,
     borderRadius: 8,
     overflow: "hidden",
     borderWidth: 1,
