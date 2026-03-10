@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { fetchSections, type Section } from "../section-list/services/sections";
 import { createStudent, fetchStudents, type Student } from "./services/students";
+import { generateStudentQrZip } from "./hooks/useExportQR";
 
 export default function StudentsList() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -19,6 +20,8 @@ export default function StudentsList() {
   const [newSectionId, setNewSectionId] = useState("");
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState("");
+  const [isExportingQr, setIsExportingQr] = useState(false);
+  const [exportError, setExportError] = useState("");
 
   useEffect(() => {
     const initialize = async () => {
@@ -127,6 +130,41 @@ export default function StudentsList() {
     resetAddForm();
   };
 
+  const onExportStudentQr = async () => {
+    if (filteredStudents.length === 0) {
+      setExportError("No students to export.");
+      return;
+    }
+
+    setIsExportingQr(true);
+    setExportError("");
+
+    try {
+      const zipBlob = await generateStudentQrZip(
+        filteredStudents.map((student) => ({
+          id: student.id,
+          student_id: student.student_id,
+          full_name: `${student.first_name} ${student.last_name}`,
+        }))
+      );
+
+      const objectUrl = URL.createObjectURL(zipBlob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = "student-qrs.zip";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch (error) {
+      setExportError(
+        error instanceof Error ? error.message : "Failed to export student QR codes."
+      );
+    } finally {
+      setIsExportingQr(false);
+    }
+  };
+
   return (
     <>
       <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
@@ -152,6 +190,14 @@ export default function StudentsList() {
           </select>
           <button
             type="button"
+            onClick={onExportStudentQr}
+            disabled={isExportingQr || filteredStudents.length === 0}
+            className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {isExportingQr ? "Extracting..." : "Extract Student QR's"}
+          </button>
+          <button
+            type="button"
             onClick={openAddModal}
             disabled={sections.length === 0}
             className="rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-70"
@@ -161,6 +207,7 @@ export default function StudentsList() {
         </div>
 
         {error ? <p className="mb-3 text-sm text-red-600">{error}</p> : null}
+        {exportError ? <p className="mb-3 text-sm text-red-600">{exportError}</p> : null}
         {sections.length === 0 ? (
           <p className="mb-3 text-sm text-zinc-500">
             Add a section first before adding students.
