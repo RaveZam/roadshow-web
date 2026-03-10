@@ -1,6 +1,6 @@
 import * as SQLite from "expo-sqlite";
 
-export const db = SQLite.openDatabaseSync("roadshow.db");
+export const db = SQLite.openDatabaseSync("roadshow-v2.db");
 
 export function initDb() {
   db.execSync(`
@@ -12,7 +12,7 @@ export function initDb() {
       student_id TEXT NOT NULL,
       first_name TEXT NOT NULL,
       last_name TEXT NOT NULL,
-      section TEXT NOT NULL
+      section_id TEXT NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS attendance (
@@ -22,6 +22,11 @@ export function initDb() {
       day2 INTEGER NOT NULL DEFAULT 0,
       day3 INTEGER NOT NULL DEFAULT 0,
       FOREIGN KEY(student_id) REFERENCES students(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS section (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS outbox (

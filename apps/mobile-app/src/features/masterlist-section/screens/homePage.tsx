@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -14,47 +14,62 @@ import { Ionicons } from "@expo/vector-icons";
 import { Fonts, Spacing } from "@/constants/theme";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { syncStudentsFromApi } from "../../../../lib/services/get-students";
+import { getStudents } from "../../../../lib/sqlite/dao/get-student-dao";
+import { syncSectionsFromApi } from "../../../../lib/services/get-sections";
+import { getSections } from "../../../../lib/sqlite/dao/get-section-dao";
 
 const ACCENT_GREEN = "#059669";
 
-const SAMPLE_STUDENTS = [
-  {
-    studentId: "2026-001",
-    fname: "Maria",
-    lname: "Santos",
-    section: "BSIT 3A",
-  },
-  {
-    studentId: "2026-002",
-    fname: "Juan",
-    lname: "Dela Cruz",
-    section: "BSCS 2B",
-  },
-  { studentId: "2026-003", fname: "Ana", lname: "Reyes", section: "BSBA 1C" },
-  {
-    studentId: "2026-004",
-    fname: "Carlos",
-    lname: "Villanueva",
-    section: "BSED 4A",
-  },
-];
+type StudentRow = {
+  studentId: string;
+  fname: string;
+  lname: string;
+  section: string;
+};
 
-const SECTION_OPTIONS = [
-  "All Sections",
-  "BSIT 3A",
-  "BSCS 2B",
-  "BSBA 1C",
-  "BSED 4A",
-];
-
+type SectionRow = {
+  id: string;
+  name: string;
+};
 export default function HomePage() {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [selectedSection, setSelectedSection] = useState("All Sections");
   const [showFilter, setShowFilter] = useState(false);
+  const [students, setStudents] = useState<StudentRow[]>([]);
+  const [sections, setSections] = useState<SectionRow[]>([]);
+
+  useEffect(() => {
+    console.log("syncing students from api");
+    syncSectionsFromApi();
+    syncStudentsFromApi();
+
+    const studentsRows = getStudents();
+    const sectionsRows = getSections();
+    setStudents(
+      studentsRows.map((s: any) => ({
+        studentId: s.student_id,
+        fname: s.first_name,
+        lname: s.last_name,
+        section: s.section_id,
+      })),
+    );
+    setSections(
+      sectionsRows.map((s: any) => ({
+        id: s.id,
+        name: s.name,
+      })),
+    );
+  }, []);
+
+  const sectionOptions = useMemo(() => {
+    const sections = Array.from(new Set(students.map((s) => s.section))).sort();
+    return ["All Sections", ...sections];
+  }, [students]);
 
   const visibleStudents = useMemo(() => {
-    return SAMPLE_STUDENTS.filter((student) => {
+    return students.filter((student) => {
       const matchesSection =
         selectedSection === "All Sections" ||
         student.section === selectedSection;
@@ -67,7 +82,7 @@ export default function HomePage() {
         student.section.toLowerCase().includes(normalizedQuery);
       return matchesSection && matchesSearch;
     });
-  }, [query, selectedSection]);
+  }, [query, selectedSection, students]);
 
   return (
     <ThemedView style={styles.screen}>
@@ -109,11 +124,11 @@ export default function HomePage() {
 
               {showFilter && (
                 <ThemedView type="backgroundSelected" style={styles.dropdown}>
-                  {SECTION_OPTIONS.map((section) => (
+                  {sections.map((section) => (
                     <Pressable
-                      key={section}
+                      key={section.id}
                       onPress={() => {
-                        setSelectedSection(section);
+                        setSelectedSection(section.name);
                         setShowFilter(false);
                       }}
                       style={({ pressed }) => [
@@ -121,7 +136,7 @@ export default function HomePage() {
                         pressed && styles.pressed,
                       ]}
                     >
-                      <ThemedText type="small">{section}</ThemedText>
+                      <ThemedText type="small">{section.name}</ThemedText>
                     </Pressable>
                   ))}
                 </ThemedView>
@@ -142,6 +157,13 @@ export default function HomePage() {
             style={styles.rowsScroll}
             contentContainerStyle={styles.rowsContainer}
           >
+            {visibleStudents.length === 0 && (
+              <ThemedView style={styles.emptyState}>
+                <ThemedText type="small" style={styles.emptyText}>
+                  No students yet. Sync to populate your masterlist.
+                </ThemedText>
+              </ThemedView>
+            )}
             {visibleStudents.map((student) => (
               <Pressable
                 key={student.studentId}
@@ -163,7 +185,7 @@ export default function HomePage() {
                   {`${student.fname} ${student.lname}`}
                 </ThemedText>
                 <ThemedText type="small" style={styles.sectionCol}>
-                  {student.section}
+                  {sections.find((s) => s.id === student.section)?.name}
                 </ThemedText>
               </Pressable>
             ))}
@@ -277,6 +299,11 @@ const styles = StyleSheet.create({
   },
   rowsScroll: { flex: 1 },
   rowsContainer: { paddingTop: Spacing.one, gap: Spacing.one },
+  emptyState: {
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.two,
+  },
+  emptyText: { color: "#71717a" },
   tableRow: {
     flexDirection: "row",
     alignItems: "center",
