@@ -1,5 +1,6 @@
 import { DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
+import { useFonts } from "expo-font";
 import { Stack, useRouter } from "expo-router";
 import React, { useEffect } from "react";
 import { Pressable, StyleSheet } from "react-native";
@@ -9,9 +10,17 @@ import bootstrapDatabase from "../../lib/sqlite/bootstrap";
 export default function TabLayout() {
   const router = useRouter();
 
+  const [fontsLoaded] = useFonts({
+    Geist: require("../../assets/fonts/Geist-Variable.ttf"),
+  });
+
   useEffect(() => {
     bootstrapDatabase();
   }, []);
+
+  if (!fontsLoaded) {
+    return null;
+  }
 
   return (
     <ThemeProvider value={DefaultTheme}>

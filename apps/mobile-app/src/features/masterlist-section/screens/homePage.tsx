@@ -11,7 +11,7 @@ import { useRouter } from "expo-router";
 
 import { Ionicons } from "@expo/vector-icons";
 
-import { Spacing } from "@/constants/theme";
+import { Fonts, Spacing } from "@/constants/theme";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 
@@ -177,6 +177,7 @@ export default function HomePage() {
             pressed && styles.pressed,
           ]}
         >
+          <Ionicons name="qr-code-outline" size={24} color="#ffffff" />
           <ThemedText type="smallBold" style={styles.actionButtonText}>
             Scan QR
           </ThemedText>
@@ -219,6 +220,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   searchInput: {
+    fontFamily: Fonts.sans,
     minHeight: 42,
     borderRadius: 8,
     paddingHorizontal: Spacing.three,
@@ -288,10 +290,12 @@ const styles = StyleSheet.create({
   nameCol: { width: "50%" },
   sectionCol: { width: "50%" },
   scanButton: {
-    minHeight: 54,
-    borderRadius: 12,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 8,
+    minHeight: 54,
+    borderRadius: 12,
     backgroundColor: ACCENT_GREEN,
   },
   pressed: { opacity: 0.75 },
