@@ -1,9 +1,9 @@
 import { CameraView } from "expo-camera";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useScanner } from "../hooks/useScanner";
 
 export default function Scanner() {
-  const [scanned, setScanned] = useState(false);
+  const lastScanAtRef = useRef(0);
 
   return (
     <CameraView
@@ -12,10 +12,10 @@ export default function Scanner() {
         barcodeTypes: ["qr"],
       }}
       onBarcodeScanned={(result) => {
-        if (!scanned) {
-          setScanned(true);
-          useScanner(result.data);
-        }
+        const now = Date.now();
+        if (now - lastScanAtRef.current < 1000) return;
+        lastScanAtRef.current = now;
+        useScanner(result.data);
       }}
     />
   );

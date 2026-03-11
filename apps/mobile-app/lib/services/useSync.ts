@@ -1,14 +1,22 @@
 import { checkWifi } from "@/hooks/useWifiChecker";
 import { syncOutbox } from "./useOutboxSynx";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 export function useSync(intervalMs = 10000) {
+  const syncingRef = useRef(false);
   useEffect(() => {
     const sync = async () => {
-      const hasWifi = await checkWifi();
-      console.log("wifi status:", hasWifi);
-      if (!hasWifi) return;
-      await syncOutbox();
+      if (syncingRef.current) return;
+      syncingRef.current = true;
+      console.log("Syncing...");
+      try {
+        const hasWifi = await checkWifi();
+        if (!hasWifi) return;
+        await syncOutbox();
+        console.log("Synced");
+      } finally {
+        syncingRef.current = false;
+      }
     };
 
     sync();
