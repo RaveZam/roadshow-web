@@ -6,9 +6,11 @@ import React, { useEffect } from "react";
 import { Pressable, StyleSheet } from "react-native";
 import { AnimatedSplashOverlay } from "@/components/animated-icon";
 import bootstrapDatabase from "../../lib/sqlite/bootstrap";
+import { useSync } from "../../lib/services/useSync";
 
 export default function TabLayout() {
   const router = useRouter();
+  useSync();
 
   const [fontsLoaded] = useFonts({
     Geist: require("../../assets/fonts/Geist-Variable.ttf"),

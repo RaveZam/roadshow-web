@@ -1,15 +1,6 @@
 import * as Network from "expo-network";
-import { useState } from "react";
 
-export async function useWifiChecker() {
-  const [hasWifi, setHasWifi] = useState(false);
+export async function checkWifi(): Promise<boolean> {
   const networkState = await Network.getNetworkStateAsync();
-
-  if (networkState.type === Network.NetworkStateType.WIFI) {
-    setHasWifi(true);
-  } else {
-    setHasWifi(false);
-  }
-
-  return hasWifi;
+  return networkState.type === Network.NetworkStateType.WIFI;
 }
