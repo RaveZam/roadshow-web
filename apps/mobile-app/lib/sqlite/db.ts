@@ -1,6 +1,6 @@
 import * as SQLite from "expo-sqlite";
 
-export const db = SQLite.openDatabaseSync("roadshow-v2.db");
+export const db = SQLite.openDatabaseSync("roadshow-v2.3.db");
 
 export function initDb() {
   db.execSync(`
@@ -31,13 +31,14 @@ export function initDb() {
 
     CREATE TABLE IF NOT EXISTS outbox (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      event_type TEXT NOT NULL,
-      payload TEXT NOT NULL,
-      created_at TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'pending'
-    );
+      student_id TEXT NOT NULL,
+      day TEXT NOT NULL,          
+      synced INTEGER DEFAULT 0,
+      FOREIGN KEY(student_id) REFERENCES students(id),
+      UNIQUE(student_id, day)
+);
 
     CREATE INDEX IF NOT EXISTS idx_attendance_student_id ON attendance(student_id);
-    CREATE INDEX IF NOT EXISTS idx_outbox_status ON outbox(status);
+    CREATE INDEX IF NOT EXISTS idx_outbox_synced ON outbox(synced);
   `);
 }

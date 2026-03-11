@@ -35,7 +35,7 @@ type SectionRow = {
 export default function HomePage() {
   const router = useRouter();
   const [query, setQuery] = useState("");
-  const [selectedSection, setSelectedSection] = useState("All Sections");
+  const [selectedSection, setSelectedSection] = useState<string | null>(null);
   const [showFilter, setShowFilter] = useState(false);
   const [students, setStudents] = useState<StudentRow[]>([]);
   const [sections, setSections] = useState<SectionRow[]>([]);
@@ -64,15 +64,13 @@ export default function HomePage() {
   }, []);
 
   const sectionOptions = useMemo(() => {
-    const sections = Array.from(new Set(students.map((s) => s.section))).sort();
-    return ["All Sections", ...sections];
-  }, [students]);
+    return [{ id: null as string | null, name: "All Sections" }, ...sections];
+  }, [sections]);
 
   const visibleStudents = useMemo(() => {
     return students.filter((student) => {
       const matchesSection =
-        selectedSection === "All Sections" ||
-        student.section === selectedSection;
+        selectedSection === null || student.section === selectedSection;
       const normalizedQuery = query.trim().toLowerCase();
       const matchesSearch =
         !normalizedQuery ||
@@ -113,7 +111,8 @@ export default function HomePage() {
                   ellipsizeMode="tail"
                   style={styles.filterButtonText}
                 >
-                  {selectedSection}
+                  {sectionOptions.find((s) => s.id === selectedSection)?.name ??
+                    "All Sections"}
                 </ThemedText>
                 <Ionicons
                   name={showFilter ? "chevron-up" : "chevron-down"}
@@ -124,11 +123,11 @@ export default function HomePage() {
 
               {showFilter && (
                 <ThemedView type="backgroundSelected" style={styles.dropdown}>
-                  {sections.map((section) => (
+                  {sectionOptions.map((section) => (
                     <Pressable
-                      key={section.id}
+                      key={section.id ?? "all"}
                       onPress={() => {
-                        setSelectedSection(section.name);
+                        setSelectedSection(section.id);
                         setShowFilter(false);
                       }}
                       style={({ pressed }) => [
