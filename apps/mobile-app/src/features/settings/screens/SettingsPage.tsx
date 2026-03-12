@@ -41,7 +41,9 @@ export default function SettingsPage() {
         <ThemedText type="subtitle">Settings</ThemedText>
 
         <ThemedView type="backgroundElement" style={styles.card}>
-          <ThemedText type="smallBold">Data</ThemedText>
+          <ThemedText type="smallBold">
+            Data (For Development Purpose Only)
+          </ThemedText>
 
           <Pressable
             onPress={() => setShowFetchModal(true)}

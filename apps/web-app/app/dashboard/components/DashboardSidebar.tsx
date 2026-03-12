@@ -9,7 +9,7 @@ type Props = {
   onSelect: (item: string) => void;
 };
 
-const navItems = ["Dashboard", "Students List", "Sections"];
+const navItems = ["Dashboard", "Students List", "Sections", "Attendance"];
 
 export default function DashboardSidebar({ active, onSelect }: Props) {
   const router = useRouter();
@@ -51,7 +51,7 @@ export default function DashboardSidebar({ active, onSelect }: Props) {
               <p className="text-sm font-semibold text-zinc-800">
                 Roadshow Attendance
               </p>
-              <p className="text-xs text-zinc-500">RouteLedger</p>
+              <p className="text-xs text-zinc-500">-rz</p>
             </div>
           </div>
         </div>

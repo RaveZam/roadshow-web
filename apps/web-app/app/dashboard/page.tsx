@@ -6,6 +6,7 @@ import StatCardsRow from "./components/StatCardsRow";
 import AlertsCard from "./components/AlertsCard";
 import StudentsList from "../student-list/StudentsList";
 import SectionListPage from "../section-list/page";
+import AttendanceList from "../attendance/AttendanceList";
 import {
   type DashboardMetrics,
   fetchDashboardMetrics,
@@ -60,14 +61,18 @@ export default function DashboardPage() {
                 ? "Dashboard"
                 : active === "Students List"
                   ? "Students List"
-                  : "Section List"}
+                  : active === "Sections"
+                    ? "Section List"
+                    : "Attendance"}
             </h1>
             <p className="mt-1 text-sm text-zinc-500">
               {active === "Dashboard"
                 ? "University attendance overview (3-day event)."
                 : active === "Students List"
                   ? "Manage students and attendance."
-                  : "Create and manage sections."}
+                  : active === "Sections"
+                    ? "Create and manage sections."
+                    : "Review attendance records by section."}
             </p>
           </header>
 
@@ -170,8 +175,10 @@ export default function DashboardPage() {
               </>
             ) : active === "Students List" ? (
               <StudentsList />
-            ) : (
+            ) : active === "Sections" ? (
               <SectionListPage />
+            ) : (
+              <AttendanceList />
             )}
           </div>
         </main>
