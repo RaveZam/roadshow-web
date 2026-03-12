@@ -11,7 +11,11 @@ export function useSync(intervalMs = 10000) {
       console.log("Syncing...");
       try {
         const hasWifi = await checkWifi();
-        if (!hasWifi) return;
+
+        if (!hasWifi) {
+          console.log("No wifi connection");
+          return;
+        }
         await syncOutbox();
         console.log("Synced");
       } finally {
