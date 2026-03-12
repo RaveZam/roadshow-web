@@ -20,6 +20,17 @@ type AttendanceRow = {
 
 const toStatus = (isPresent: boolean) => (isPresent ? "Present" : "Absent");
 
+const toCsvValue = (value: string | number) => {
+  const text = String(value);
+  const escaped = text.replace(/"/g, '""');
+  return `"${escaped}"`;
+};
+
+const toCsvExcelText = (value: string) => {
+  const escaped = value.replace(/"/g, '""');
+  return `"=""${escaped}"""`;
+};
+
 export default function AttendanceList() {
   const [students, setStudents] = useState<Student[]>([]);
   const [sections, setSections] = useState<Section[]>([]);
@@ -113,6 +124,59 @@ export default function AttendanceList() {
     });
   }, [rows, search, selectedSectionId]);
 
+  const handleExtractRecords = () => {
+    const header = [
+      "Student Name",
+      "Student ID",
+      "Section",
+      "Day 1",
+      "Day 2",
+      "Day 3",
+      "Days Attended",
+    ];
+
+    const lines = [
+      header.map(toCsvValue).join(","),
+      ...filteredRows.map((row) => {
+        const studentName = `${row.firstName} ${row.lastName}`.trim();
+        const rowValues = [
+          studentName,
+          row.studentId,
+          row.sectionName,
+          toStatus(row.day1),
+          toStatus(row.day2),
+          toStatus(row.day3),
+        ];
+
+        return `${rowValues.map(toCsvValue).join(",")},${toCsvExcelText(`${row.daysAttended}/3`)}`;
+      }),
+    ];
+
+    const csv = `${lines.join("\n")}\n`;
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+
+    const sectionLabel =
+      selectedSectionId === "all"
+        ? "all-sections"
+        : sections.find((section) => section.id === selectedSectionId)?.name ??
+          "section";
+
+    const safeSectionLabel = sectionLabel
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+
+    const filename = `attendance-${safeSectionLabel}.csv`;
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
       <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -135,6 +199,14 @@ export default function AttendanceList() {
             </option>
           ))}
         </select>
+        <button
+          type="button"
+          onClick={handleExtractRecords}
+          disabled={isFetching || filteredRows.length === 0}
+          className="rounded-md border border-emerald-600 bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:border-emerald-400 disabled:bg-emerald-400"
+        >
+          Extract Record
+        </button>
       </div>
 
       {error ? <p className="mb-3 text-sm text-red-600">{error}</p> : null}
