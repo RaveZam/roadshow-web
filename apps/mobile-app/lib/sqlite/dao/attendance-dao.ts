@@ -16,6 +16,16 @@ export function getAttendance() {
   return db.getAllSync(`SELECT * FROM attendance`);
 }
 
+export function getAttendanceWithStudentNames() {
+  return db.getAllSync(`
+    SELECT a.id, a.student_id, a.day1, a.day2, a.day3, a.scanned_at,
+           s.first_name, s.last_name
+    FROM attendance a
+    LEFT JOIN students s ON a.student_id = s.id
+    ORDER BY a.scanned_at DESC
+  `);
+}
+
 export function getAttendanceByStudentId(supabaseId: string) {
   return db.getAllSync(`SELECT * FROM attendance WHERE student_id = ?`, [
     supabaseId,

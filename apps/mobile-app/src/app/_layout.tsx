@@ -3,7 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFonts } from "expo-font";
 import { Stack, useRouter } from "expo-router";
 import React, { useEffect } from "react";
-import { Pressable, StyleSheet } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { AnimatedSplashOverlay } from "@/components/animated-icon";
 import bootstrapDatabase from "../../lib/sqlite/bootstrap";
 import { useSync } from "../../lib/services/useSync";
@@ -39,15 +39,26 @@ export default function TabLayout() {
             headerShown: true,
             title: "Masterlist",
             headerRight: () => (
-              <Pressable
-                onPress={() => router.push("../settings")}
-                style={({ pressed }) => [
-                  styles.headerButton,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <Ionicons name="settings-outline" size={24} color="#3f3f46" />
-              </Pressable>
+              <View style={styles.headerActions}>
+                <Pressable
+                  onPress={() => router.push("../history")}
+                  style={({ pressed }) => [
+                    styles.headerButton,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Ionicons name="time-outline" size={24} color="#3f3f46" />
+                </Pressable>
+                <Pressable
+                  onPress={() => router.push("../settings")}
+                  style={({ pressed }) => [
+                    styles.headerButton,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Ionicons name="settings-outline" size={24} color="#3f3f46" />
+                </Pressable>
+              </View>
             ),
           }}
         />
@@ -57,6 +68,13 @@ export default function TabLayout() {
           options={{
             headerShown: true,
             title: "Student Data",
+          }}
+        />
+        <Stack.Screen
+          name="history"
+          options={{
+            headerShown: true,
+            title: "History",
           }}
         />
         <Stack.Screen
@@ -72,6 +90,10 @@ export default function TabLayout() {
 }
 
 const styles = StyleSheet.create({
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
   headerButton: {
     padding: 4,
   },

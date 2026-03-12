@@ -7,6 +7,7 @@ type SectionDTO = {
 };
 
 export async function syncSectionsFromApi() {
+  console.log("syncing sections from api");
   const res = await supabase.from("sections").select("*");
 
   // console.log("res" + JSON.stringify(res.data));

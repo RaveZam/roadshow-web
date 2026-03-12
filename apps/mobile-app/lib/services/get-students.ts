@@ -10,6 +10,7 @@ type StudentDTO = {
 };
 
 export async function syncStudentsFromApi() {
+  console.log("syncing students from api");
   const res = await supabase.from("students").select("*");
 
   // console.log("res" + JSON.stringify(res.data));
@@ -18,7 +19,6 @@ export async function syncStudentsFromApi() {
   db.execSync("BEGIN");
   try {
     for (const s of students) {
-      // console.log("inserting student:" + JSON.stringify(s));
       db.runSync(
         `
           INSERT OR IGNORE INTO students (

@@ -48,7 +48,6 @@ export default function HomePage() {
       console.log("no wifi connection");
       return;
     }
-    console.log("syncing students from api");
 
     syncSectionsFromApi();
     syncStudentsFromApi();

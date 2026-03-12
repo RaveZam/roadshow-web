@@ -1,6 +1,6 @@
 import * as SQLite from "expo-sqlite";
 
-export const db = SQLite.openDatabaseSync("roadshow-v2.3.db");
+export const db = SQLite.openDatabaseSync("roadshow-v2.5.db");
 
 export function initDb() {
   db.execSync(`
@@ -21,6 +21,7 @@ export function initDb() {
       day1 INTEGER NOT NULL DEFAULT 0,
       day2 INTEGER NOT NULL DEFAULT 0,
       day3 INTEGER NOT NULL DEFAULT 0,
+      scanned_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY(student_id) REFERENCES students(id)
     );
 
