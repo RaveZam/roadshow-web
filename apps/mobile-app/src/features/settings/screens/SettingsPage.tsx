@@ -5,13 +5,35 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Spacing } from "@/constants/theme";
+import { db } from "../../../../lib/sqlite/db";
 
 const ACCENT_GREEN = "#059669";
+const ACCENT_RED = "#dc2626";
 
 export default function SettingsPage() {
   const [showFetchModal, setShowFetchModal] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
   const [lastFetchStatus, setLastFetchStatus] = useState("Not fetched yet");
+  const [lastResetStatus, setLastResetStatus] = useState("Not wiped yet");
   const pendingSyncCount = 12;
+
+  const wipeLocalDatabase = () => {
+    try {
+      db.execSync(`
+        DELETE FROM outbox;
+        DELETE FROM attendance;
+        DELETE FROM students;
+        DELETE FROM section;
+        DELETE FROM sqlite_sequence WHERE name='outbox';
+      `);
+      setLastResetStatus("Wiped just now");
+    } catch (error) {
+      console.log("[sqlite] Failed to wipe local tables", error);
+      setLastResetStatus("Wipe failed");
+    } finally {
+      setShowResetModal(false);
+    }
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -35,6 +57,23 @@ export default function SettingsPage() {
 
           <ThemedText type="small" themeColor="textSecondary">
             Last fetch: {lastFetchStatus}
+          </ThemedText>
+
+          <Pressable
+            onPress={() => setShowResetModal(true)}
+            style={({ pressed }) => [
+              styles.actionButton,
+              styles.destructiveButton,
+              pressed && styles.pressed,
+            ]}
+          >
+            <ThemedText type="smallBold" style={styles.actionButtonText}>
+              Wipe Local Database
+            </ThemedText>
+          </Pressable>
+
+          <ThemedText type="small" themeColor="textSecondary">
+            Last wipe: {lastResetStatus}
           </ThemedText>
         </ThemedView>
 
@@ -90,6 +129,49 @@ export default function SettingsPage() {
           </ThemedView>
         </View>
       </Modal>
+
+      <Modal
+        visible={showResetModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowResetModal(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <ThemedView type="backgroundElement" style={styles.modalCard}>
+            <ThemedText type="smallBold">Wipe local database?</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              This deletes all local outbox, attendance, students, and section
+              rows.
+            </ThemedText>
+
+            <View style={styles.modalActions}>
+              <Pressable
+                onPress={() => setShowResetModal(false)}
+                style={({ pressed }) => [
+                  styles.modalButton,
+                  styles.noButton,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <ThemedText type="smallBold">Cancel</ThemedText>
+              </Pressable>
+
+              <Pressable
+                onPress={wipeLocalDatabase}
+                style={({ pressed }) => [
+                  styles.modalButton,
+                  styles.destructiveButton,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <ThemedText type="smallBold" style={styles.actionButtonText}>
+                  Wipe
+                </ThemedText>
+              </Pressable>
+            </View>
+          </ThemedView>
+        </View>
+      </Modal>
     </ThemedView>
   );
 }
@@ -115,6 +197,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: ACCENT_GREEN,
+  },
+  destructiveButton: {
+    backgroundColor: ACCENT_RED,
+    borderColor: ACCENT_RED,
   },
   actionButtonText: {
     color: "#ffffff",

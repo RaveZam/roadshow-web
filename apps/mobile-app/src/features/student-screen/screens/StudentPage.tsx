@@ -1,32 +1,38 @@
-import React from "react";
+import React, { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams } from "expo-router";
-
 import { Spacing } from "@/constants/theme";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-
-const DAYS = ["Day 1", "Day 2", "Day 3"] as const;
-
-function LocalAttendanceNote() {
-  return (
-    <ThemedText type="small" style={styles.note}>
-      This is only your local copy of attendance, previous date or future
-      attendance record might be recorded from other Attendance takers. All data
-      is merged on the admin&apos;s side.
-    </ThemedText>
-  );
-}
+import LocalAttendanceNote from "../components/LocalAttendanceNote";
+import { getAttendanceByStudentId } from "../../../../lib/sqlite/dao/attendance-dao";
+import { useEffect } from "react";
+type AttendanceRow = {
+  id: number;
+  student_id: string;
+  day1: number;
+  day2: number;
+  day3: number;
+};
 
 export default function StudentPage() {
   const params = useLocalSearchParams<{
     studentId?: string;
     studentName?: string;
+    supabaseId?: string;
   }>();
 
   const studentId = params.studentId ?? "";
   const studentName = params.studentName ?? "Unknown Student";
+  const supabaseId = params.supabaseId ?? "";
+  const [attendance, setAttendance] = useState<AttendanceRow[]>([]);
+
+  useEffect(() => {
+    const attendance = getAttendanceByStudentId(supabaseId) as AttendanceRow[];
+    setAttendance(attendance);
+    console.log(attendance);
+  }, [supabaseId]);
 
   return (
     <ThemedView style={styles.screen}>
@@ -52,16 +58,55 @@ export default function StudentPage() {
                 Attendance
               </ThemedText>
             </View>
-            {DAYS.map((day) => (
-              <View key={day} style={styles.tableRow}>
-                <ThemedText type="small" style={styles.dayCol}>
-                  {day}
-                </ThemedText>
-                <ThemedText type="small" style={styles.statusCol}>
-                  -
-                </ThemedText>
-              </View>
-            ))}
+
+            <View style={styles.tableRow}>
+              <ThemedText type="small" style={styles.dayCol}>
+                Day 1
+              </ThemedText>
+              <ThemedText
+                type="small"
+                style={[
+                  styles.statusCol,
+                  attendance[0]?.day1
+                    ? styles.statusPresent
+                    : styles.statusAbsent,
+                ]}
+              >
+                {attendance[0]?.day1 ? "Present" : "Absent"}
+              </ThemedText>
+            </View>
+            <View style={styles.tableRow}>
+              <ThemedText type="small" style={styles.dayCol}>
+                Day 2
+              </ThemedText>
+              <ThemedText
+                type="small"
+                style={[
+                  styles.statusCol,
+                  attendance[0]?.day2
+                    ? styles.statusPresent
+                    : styles.statusAbsent,
+                ]}
+              >
+                {attendance[0]?.day2 ? "Present" : "Absent"}
+              </ThemedText>
+            </View>
+            <View style={styles.tableRow}>
+              <ThemedText type="small" style={styles.dayCol}>
+                Day 3
+              </ThemedText>
+              <ThemedText
+                type="small"
+                style={[
+                  styles.statusCol,
+                  attendance[0]?.day3
+                    ? styles.statusPresent
+                    : styles.statusAbsent,
+                ]}
+              >
+                {attendance[0]?.day3 ? "Present" : "Absent"}
+              </ThemedText>
+            </View>
           </ThemedView>
         </ThemedView>
         <LocalAttendanceNote />
@@ -112,11 +157,6 @@ const styles = StyleSheet.create({
   },
   dayCol: { width: "50%" },
   statusCol: { width: "50%" },
-  note: {
-    color: "#71717a",
-    marginTop: "auto",
-    opacity: 0.45,
-    fontStyle: "italic",
-    paddingHorizontal: Spacing.two,
-  },
+  statusPresent: { color: "#16a34a" },
+  statusAbsent: { opacity: 0.2 },
 });

@@ -1,6 +1,6 @@
 import { CameraView } from "expo-camera";
-import { useRef, useState } from "react";
-import { useScanner } from "../hooks/useScanner";
+import { useRef } from "react";
+import { scanStudent } from "../hooks/useScanner";
 
 export default function Scanner() {
   const lastScanAtRef = useRef(0);
@@ -15,7 +15,7 @@ export default function Scanner() {
         const now = Date.now();
         if (now - lastScanAtRef.current < 1000) return;
         lastScanAtRef.current = now;
-        useScanner(result.data);
+        scanStudent(result.data);
       }}
     />
   );

@@ -37,6 +37,6 @@ export async function syncStudentsFromApi() {
     return { insertedOrSkipped: students.length };
   } catch (error) {
     db.execSync("ROLLBACK");
-    throw error;
+    return;
   }
 }

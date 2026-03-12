@@ -39,7 +39,7 @@ function logTableSnapshot(
 export default function bootstrapDatabase() {
   initDb();
   // logTableSnapshot("students");
-  // logTableSnapshot("attendance");
-  // logTableSnapshot("outbox");
+  logTableSnapshot("attendance");
+  logTableSnapshot("outbox");
   // logTableSnapshot("section");
 }

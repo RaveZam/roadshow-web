@@ -18,10 +18,12 @@ import { syncStudentsFromApi } from "../../../../lib/services/get-students";
 import { getStudents } from "../../../../lib/sqlite/dao/get-student-dao";
 import { syncSectionsFromApi } from "../../../../lib/services/get-sections";
 import { getSections } from "../../../../lib/sqlite/dao/get-section-dao";
+import { checkWifi } from "@/hooks/useWifiChecker";
 
 const ACCENT_GREEN = "#059669";
 
 type StudentRow = {
+  id: string;
   studentId: string;
   fname: string;
   lname: string;
@@ -41,7 +43,13 @@ export default function HomePage() {
   const [sections, setSections] = useState<SectionRow[]>([]);
 
   useEffect(() => {
+    const hasWifi = checkWifi();
+    if (!hasWifi) {
+      console.log("no wifi connection");
+      return;
+    }
     console.log("syncing students from api");
+
     syncSectionsFromApi();
     syncStudentsFromApi();
 
@@ -49,6 +57,7 @@ export default function HomePage() {
     const sectionsRows = getSections();
     setStudents(
       studentsRows.map((s: any) => ({
+        id: s.id,
         studentId: s.student_id,
         fname: s.first_name,
         lname: s.last_name,
@@ -170,6 +179,7 @@ export default function HomePage() {
                   router.push({
                     pathname: "/student-screen/[studentId]",
                     params: {
+                      supabaseId: student.id,
                       studentId: student.studentId,
                       studentName: `${student.fname} ${student.lname}`,
                     },

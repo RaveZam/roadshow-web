@@ -31,6 +31,6 @@ export async function syncSectionsFromApi() {
     return { insertedOrSkipped: sections.length };
   } catch (error) {
     db.execSync("ROLLBACK");
-    throw error;
+    return;
   }
 }

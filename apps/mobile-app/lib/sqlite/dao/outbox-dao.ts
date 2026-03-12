@@ -1,7 +1,7 @@
 import { db } from "../db";
 
 export function postStudentOnOutbox(studentId: string, day: string) {
-  db.runAsync(`INSERT OR IGNORE INTO outbox (student_id, day) VALUES (?, ?)`, [
+  db.runSync(`INSERT OR IGNORE INTO outbox (student_id, day) VALUES (?, ?)`, [
     studentId,
     day,
   ]);
