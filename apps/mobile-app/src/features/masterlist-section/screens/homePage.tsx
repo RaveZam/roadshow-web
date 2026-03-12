@@ -43,32 +43,55 @@ export default function HomePage() {
   const [sections, setSections] = useState<SectionRow[]>([]);
 
   useEffect(() => {
-    const hasWifi = checkWifi();
-    if (!hasWifi) {
-      console.log("no wifi connection");
-      return;
-    }
+    let isMounted = true;
 
-    syncSectionsFromApi();
-    syncStudentsFromApi();
+    const loadFromLocal = () => {
+      const studentsRows = getStudents();
+      const sectionsRows = getSections();
 
-    const studentsRows = getStudents();
-    const sectionsRows = getSections();
-    setStudents(
-      studentsRows.map((s: any) => ({
-        id: s.id,
-        studentId: s.student_id,
-        fname: s.first_name,
-        lname: s.last_name,
-        section: s.section_id,
-      })),
-    );
-    setSections(
-      sectionsRows.map((s: any) => ({
-        id: s.id,
-        name: s.name,
-      })),
-    );
+      if (!isMounted) return;
+
+      setStudents(
+        studentsRows.map((s: any) => ({
+          id: s.id,
+          studentId: s.student_id,
+          fname: s.first_name,
+          lname: s.last_name,
+          section: s.section_id,
+        })),
+      );
+
+      setSections(
+        sectionsRows.map((s: any) => ({
+          id: s.id,
+          name: s.name,
+        })),
+      );
+    };
+
+    const initialize = async () => {
+      loadFromLocal();
+
+      try {
+        // 2) Only sync if online
+        const hasWifi = await checkWifi();
+        if (!hasWifi) return;
+
+        await Promise.all([syncSectionsFromApi(), syncStudentsFromApi()]);
+
+        // 3) Reload local after sync so UI updates
+        loadFromLocal();
+      } catch (error) {
+        console.log("sync failed:", error);
+        // Keep already-loaded local data
+      }
+    };
+
+    initialize();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const sectionOptions = useMemo(() => {
