@@ -9,11 +9,16 @@ export type Attendance = {
   updated_at: string;
 };
 
-export async function fetchAttendance() {
+export async function fetchAttendance(studentIds: string[] = []) {
   const supabase = createClient();
-
-  return supabase
+  let query = supabase
     .from("attendance")
     .select("id, student_id, day1, day2, day3, updated_at")
     .order("updated_at", { ascending: false });
+
+  if (studentIds.length > 0) {
+    query = query.in("student_id", studentIds);
+  }
+
+  return query;
 }

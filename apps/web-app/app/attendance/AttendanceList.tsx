@@ -2,7 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { fetchSections, type Section } from "../section-list/services/sections";
-import { fetchStudents, type Student } from "../student-list/services/students";
+import {
+  fetchStudents,
+  fetchStudentsForExport,
+  STUDENTS_PAGE_SIZE,
+  type Student,
+} from "../student-list/services/students";
 import { fetchAttendance, type Attendance } from "./services/attendance";
 
 type AttendanceRow = {
@@ -39,42 +44,70 @@ export default function AttendanceList() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [selectedSectionId, setSelectedSectionId] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalStudents, setTotalStudents] = useState(0);
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
-    const initialize = async () => {
-      setIsFetching(true);
-      setError("");
-
-      const [studentsResult, sectionsResult, attendanceResult] = await Promise.all([
-        fetchStudents(),
-        fetchSections(),
-        fetchAttendance(),
-      ]);
-
-      setIsFetching(false);
-
-      if (studentsResult.error) {
-        setError(studentsResult.error.message);
-        return;
-      }
+    const initializeSections = async () => {
+      const sectionsResult = await fetchSections();
 
       if (sectionsResult.error) {
         setError(sectionsResult.error.message);
         return;
       }
 
-      if (attendanceResult.error) {
-        setError(attendanceResult.error.message);
-        return;
-      }
-
-      setStudents(studentsResult.data ?? []);
       setSections(sectionsResult.data ?? []);
-      setAttendance(attendanceResult.data ?? []);
     };
 
-    initialize();
+    initializeSections();
   }, []);
+
+  const totalPages = Math.max(1, Math.ceil(totalStudents / STUDENTS_PAGE_SIZE));
+
+  const loadAttendance = async (page: number, sectionId: string) => {
+    setIsFetching(true);
+    setError("");
+
+    const studentsResult = await fetchStudents(page, sectionId);
+
+    if (studentsResult.error) {
+      setIsFetching(false);
+      setError(studentsResult.error.message);
+      return;
+    }
+
+    const pagedStudents = studentsResult.data ?? [];
+    setStudents(pagedStudents);
+    setTotalStudents(studentsResult.count ?? 0);
+
+    if (pagedStudents.length === 0) {
+      setAttendance([]);
+      setIsFetching(false);
+      return;
+    }
+
+    const attendanceResult = await fetchAttendance(
+      pagedStudents.map((student) => student.id),
+    );
+
+    setIsFetching(false);
+
+    if (attendanceResult.error) {
+      setError(attendanceResult.error.message);
+      return;
+    }
+
+    setAttendance(attendanceResult.data ?? []);
+  };
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void loadAttendance(currentPage, selectedSectionId);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [currentPage, selectedSectionId]);
 
   const rows = useMemo(() => {
     const attendanceByStudentId = new Map(
@@ -124,7 +157,58 @@ export default function AttendanceList() {
     });
   }, [rows, search, selectedSectionId]);
 
-  const handleExtractRecords = () => {
+  const handleExtractRecords = async () => {
+    setIsExporting(true);
+    setError("");
+
+    const exportStudentsResult = await fetchStudentsForExport(selectedSectionId);
+
+    if (exportStudentsResult.error) {
+      setIsExporting(false);
+      setError(exportStudentsResult.error.message);
+      return;
+    }
+
+    const exportStudents = exportStudentsResult.data ?? [];
+
+    if (exportStudents.length === 0) {
+      setIsExporting(false);
+      setError("No students to export.");
+      return;
+    }
+
+    const exportAttendanceResult = await fetchAttendance(
+      exportStudents.map((student) => student.id),
+    );
+
+    if (exportAttendanceResult.error) {
+      setIsExporting(false);
+      setError(exportAttendanceResult.error.message);
+      return;
+    }
+
+    const attendanceByStudentId = new Map(
+      (exportAttendanceResult.data ?? []).map((record) => [record.student_id, record]),
+    );
+    const sectionById = new Map(sections.map((section) => [section.id, section.name]));
+    const exportRows = exportStudents.map((student) => {
+      const record = attendanceByStudentId.get(student.id);
+      const day1 = record ? Boolean(record.day1) : false;
+      const day2 = record ? Boolean(record.day2) : false;
+      const day3 = record ? Boolean(record.day3) : false;
+      const daysAttended = Number(day1) + Number(day2) + Number(day3);
+
+      return {
+        studentName: `${student.first_name} ${student.last_name}`.trim(),
+        studentId: student.student_id,
+        sectionName: sectionById.get(student.section_id) ?? "Unknown section",
+        day1,
+        day2,
+        day3,
+        daysAttended,
+      };
+    });
+
     const header = [
       "Student Name",
       "Student ID",
@@ -137,10 +221,9 @@ export default function AttendanceList() {
 
     const lines = [
       header.map(toCsvValue).join(","),
-      ...filteredRows.map((row) => {
-        const studentName = `${row.firstName} ${row.lastName}`.trim();
+      ...exportRows.map((row) => {
         const rowValues = [
-          studentName,
+          row.studentName,
           row.studentId,
           row.sectionName,
           toStatus(row.day1),
@@ -175,6 +258,7 @@ export default function AttendanceList() {
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
+    setIsExporting(false);
   };
 
   return (
@@ -189,7 +273,10 @@ export default function AttendanceList() {
         />
         <select
           value={selectedSectionId}
-          onChange={(e) => setSelectedSectionId(e.target.value)}
+          onChange={(e) => {
+            setSelectedSectionId(e.target.value);
+            setCurrentPage(1);
+          }}
           className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 focus:outline-none focus:ring-1 focus:ring-emerald-300"
         >
           <option value="all">All sections</option>
@@ -202,10 +289,10 @@ export default function AttendanceList() {
         <button
           type="button"
           onClick={handleExtractRecords}
-          disabled={isFetching || filteredRows.length === 0}
+          disabled={isFetching || isExporting || totalStudents === 0}
           className="rounded-md border border-emerald-600 bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:border-emerald-400 disabled:bg-emerald-400"
         >
-          Extract Record
+          {isExporting ? "Extracting..." : "Extract Record"}
         </button>
       </div>
 
@@ -263,6 +350,29 @@ export default function AttendanceList() {
               </div>
             ))
           )}
+        </div>
+      </div>
+      <div className="mt-3 flex items-center justify-between">
+        <p className="text-xs text-zinc-500">
+          Page {currentPage} of {totalPages}
+        </p>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+            disabled={currentPage === 1 || isFetching}
+            className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            Previous
+          </button>
+          <button
+            type="button"
+            onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+            disabled={currentPage >= totalPages || isFetching}
+            className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            Next
+          </button>
         </div>
       </div>
     </div>

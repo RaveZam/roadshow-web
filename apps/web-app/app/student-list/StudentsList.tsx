@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { fetchSections, type Section } from "../section-list/services/sections";
 import {
   createStudent,
+  fetchStudentsForExport,
   fetchStudents,
   STUDENTS_PAGE_SIZE,
   type Student,
@@ -157,17 +158,26 @@ export default function StudentsList() {
   };
 
   const onExportStudentQr = async () => {
-    if (filteredStudents.length === 0) {
-      setExportError("No students to export.");
-      return;
-    }
-
     setIsExportingQr(true);
     setExportError("");
 
     try {
+      const exportStudentsResult = await fetchStudentsForExport(selectedSectionId);
+
+      if (exportStudentsResult.error) {
+        setExportError(exportStudentsResult.error.message);
+        return;
+      }
+
+      const exportStudents = exportStudentsResult.data ?? [];
+
+      if (exportStudents.length === 0) {
+        setExportError("No students to export.");
+        return;
+      }
+
       const zipBlob = await generateStudentQrZip(
-        filteredStudents.map((student) => ({
+        exportStudents.map((student) => ({
           id: student.id,
           student_id: student.student_id,
           full_name: `${student.first_name} ${student.last_name}`,
@@ -222,7 +232,7 @@ export default function StudentsList() {
           <button
             type="button"
             onClick={onExportStudentQr}
-            disabled={isExportingQr || filteredStudents.length === 0}
+            disabled={isExportingQr || isFetching || totalStudents === 0}
             className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-70"
           >
             {isExportingQr ? "Extracting..." : "Extract Student QR's"}

@@ -30,6 +30,20 @@ export async function fetchStudents(page = 1, sectionId = "all") {
   return query.range(from, to);
 }
 
+export async function fetchStudentsForExport(sectionId = "all") {
+  const supabase = createClient();
+  let query = supabase
+    .from("students")
+    .select("id, student_id, first_name, last_name, section_id, created_at")
+    .order("created_at", { ascending: false });
+
+  if (sectionId !== "all") {
+    query = query.eq("section_id", sectionId);
+  }
+
+  return query;
+}
+
 export async function createStudent(payload: {
   student_id: string;
   first_name: string;
