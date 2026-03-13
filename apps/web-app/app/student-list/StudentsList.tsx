@@ -2,7 +2,12 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { fetchSections, type Section } from "../section-list/services/sections";
-import { createStudent, fetchStudents, type Student } from "./services/students";
+import {
+  createStudent,
+  fetchStudents,
+  STUDENTS_PAGE_SIZE,
+  type Student,
+} from "./services/students";
 import { generateStudentQrZip } from "./hooks/useExportQR";
 
 export default function StudentsList() {
@@ -12,6 +17,8 @@ export default function StudentsList() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [selectedSectionId, setSelectedSectionId] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalStudents, setTotalStudents] = useState(0);
 
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [studentId, setStudentId] = useState("");
@@ -23,22 +30,28 @@ export default function StudentsList() {
   const [isExportingQr, setIsExportingQr] = useState(false);
   const [exportError, setExportError] = useState("");
 
+  const totalPages = Math.max(1, Math.ceil(totalStudents / STUDENTS_PAGE_SIZE));
+
+  const loadStudents = async (page: number, sectionId: string) => {
+    setIsFetching(true);
+    setError("");
+
+    const studentsResult = await fetchStudents(page, sectionId);
+
+    setIsFetching(false);
+
+    if (studentsResult.error) {
+      setError(studentsResult.error.message);
+      return;
+    }
+
+    setStudents(studentsResult.data ?? []);
+    setTotalStudents(studentsResult.count ?? 0);
+  };
+
   useEffect(() => {
-    const initialize = async () => {
-      setIsFetching(true);
-      setError("");
-
-      const [studentsResult, sectionsResult] = await Promise.all([
-        fetchStudents(),
-        fetchSections(),
-      ]);
-
-      setIsFetching(false);
-
-      if (studentsResult.error) {
-        setError(studentsResult.error.message);
-        return;
-      }
+    const initializeSections = async () => {
+      const sectionsResult = await fetchSections();
 
       if (sectionsResult.error) {
         setError(sectionsResult.error.message);
@@ -47,15 +60,18 @@ export default function StudentsList() {
 
       const fetchedSections = sectionsResult.data ?? [];
       setSections(fetchedSections);
-      setStudents(studentsResult.data ?? []);
 
       if (fetchedSections.length > 0) {
         setNewSectionId(fetchedSections[0].id);
       }
     };
 
-    initialize();
+    initializeSections();
   }, []);
+
+  useEffect(() => {
+    loadStudents(currentPage, selectedSectionId);
+  }, [currentPage, selectedSectionId]);
 
   const sectionNameById = useMemo(() => {
     return new Map(sections.map((section) => [section.id, section.name]));
@@ -123,7 +139,11 @@ export default function StudentsList() {
     }
 
     if (data) {
-      setStudents((current) => [data, ...current]);
+      if (currentPage === 1) {
+        await loadStudents(1, selectedSectionId);
+      } else {
+        setCurrentPage(1);
+      }
     }
 
     closeAddModal();
@@ -178,7 +198,10 @@ export default function StudentsList() {
           />
           <select
             value={selectedSectionId}
-            onChange={(e) => setSelectedSectionId(e.target.value)}
+            onChange={(e) => {
+              setSelectedSectionId(e.target.value);
+              setCurrentPage(1);
+            }}
             className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 focus:outline-none focus:ring-1 focus:ring-emerald-300"
           >
             <option value="all">All sections</option>
@@ -248,6 +271,31 @@ export default function StudentsList() {
                 </div>
               ))
             )}
+          </div>
+        </div>
+        <div className="mt-3 flex items-center justify-between">
+          <p className="text-xs text-zinc-500">
+            Page {currentPage} of {totalPages}
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+              disabled={currentPage === 1 || isFetching}
+              className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              Previous
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                setCurrentPage((page) => Math.min(totalPages, page + 1))
+              }
+              disabled={currentPage >= totalPages || isFetching}
+              className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              Next
+            </button>
           </div>
         </div>
       </div>
