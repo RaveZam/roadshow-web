@@ -78,7 +78,7 @@ export default function DashboardPage() {
                             Daily Attendance Trend
                           </h2>
                           <p className="text-xs text-zinc-500">
-                            {metrics.eventWindowLabel}
+                            3 Day University Attendance
                           </p>
                         </div>
 
@@ -87,8 +87,10 @@ export default function DashboardPage() {
 
                       <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
                         <h2 className="text-lg font-semibold text-zinc-800">
-                          Top Sections by Attendance
+                          {DAY_FILTER_LABELS[dayFilter]} Top Sections by
+                          Attendance
                         </h2>
+
                         <div className="mt-4 divide-y divide-zinc-100 rounded-lg border border-zinc-200">
                           {metrics.topSections.map((section) => (
                             <div
