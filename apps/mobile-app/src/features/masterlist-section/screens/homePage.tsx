@@ -19,6 +19,7 @@ import { getStudents } from "../../../../lib/sqlite/dao/get-student-dao";
 import { syncSectionsFromApi } from "../../../../lib/services/get-sections";
 import { getSections } from "../../../../lib/sqlite/dao/get-section-dao";
 import { checkWifi } from "@/hooks/useWifiChecker";
+import SyncedSnackbar from "@/components/ui/syncedSnackbar";
 
 const ACCENT_GREEN = "#059669";
 
@@ -39,6 +40,7 @@ export default function HomePage() {
   const [query, setQuery] = useState("");
   const [selectedSection, setSelectedSection] = useState<string | null>(null);
   const [showFilter, setShowFilter] = useState(false);
+  const [showSyncSnackbar, setShowSyncSnackbar] = useState(true);
   const [students, setStudents] = useState<StudentRow[]>([]);
   const [sections, setSections] = useState<SectionRow[]>([]);
 
@@ -117,6 +119,20 @@ export default function HomePage() {
     <ThemedView style={styles.screen}>
       <SafeAreaView style={styles.safeArea}>
         <ThemedView type="backgroundElement" style={styles.listCard}>
+          <View style={styles.topActions}>
+            <Pressable
+              onPress={() => setShowSyncSnackbar((prev) => !prev)}
+              style={({ pressed }) => [
+                styles.toggleSnackbarButton,
+                pressed && styles.pressed,
+              ]}
+            >
+              <ThemedText type="smallBold" style={styles.toggleSnackbarText}>
+                {showSyncSnackbar ? "Hide sync notif" : "Show sync notif"}
+              </ThemedText>
+            </Pressable>
+          </View>
+
           <View style={styles.controlsRow}>
             <View style={styles.searchContainer}>
               <TextInput
@@ -222,6 +238,10 @@ export default function HomePage() {
             ))}
           </ScrollView>
         </ThemedView>
+        <SyncedSnackbar
+          visible={showSyncSnackbar}
+          message="Synced successfully"
+        />
 
         <Pressable
           onPress={() => router.push("/qr-section")}
@@ -268,6 +288,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: Spacing.two,
     alignItems: "flex-start",
+  },
+  topActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+  },
+  toggleSnackbarButton: {
+    minHeight: 34,
+    borderRadius: 8,
+    paddingHorizontal: Spacing.two,
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#e4e4e7",
+    backgroundColor: "#ffffff",
+  },
+  toggleSnackbarText: {
+    color: "#3f3f46",
   },
   searchContainer: {
     flex: 1,
@@ -354,7 +390,14 @@ const styles = StyleSheet.create({
     gap: 8,
     minHeight: 54,
     borderRadius: 12,
-    backgroundColor: ACCENT_GREEN,
+    backgroundColor: "#14532d",
+    borderWidth: 1,
+    borderColor: "#22c55e",
+    shadowColor: "#000000",
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
   },
   pressed: { opacity: 0.75 },
 });
