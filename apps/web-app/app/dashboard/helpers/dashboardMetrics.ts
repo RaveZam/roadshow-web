@@ -1,57 +1,60 @@
 import type { Attendance } from "@/app/attendance/services/attendance";
 import type { Section } from "@/app/section-list/services/sections";
 import type { Student } from "@/app/student-list/services/students";
-
-export type DashboardStatCard = {
-  label: string;
-  value: string;
-  note: string;
-  highlighted?: boolean;
-};
-
-export type TrendRow = {
-  day: string;
-  checkedIn: number;
-  rate: string;
-};
-
-export type TopSectionRow = {
-  section: string;
-  checkedIn: number;
-  rate: string;
-};
-
-export type DashboardAlert = {
-  title: string;
-  details: string;
-  badge: string;
-};
-
-export type DashboardMetrics = {
-  eventWindowLabel: string;
-  statCards: DashboardStatCard[];
-  trendRows: TrendRow[];
-  topSections: TopSectionRow[];
-  alerts: DashboardAlert[];
-};
+import type {
+  DashboardMetrics,
+  TopSectionRow,
+  TrendRow,
+  DashboardAlert,
+  DayFilter,
+} from "../types/master-types";
 
 const getAttendedDays = (record: Attendance | undefined) =>
   Number(Boolean(record?.day1)) +
   Number(Boolean(record?.day2)) +
   Number(Boolean(record?.day3));
 
+const getDayCheckIn = (record: Attendance | undefined, dayFilter: DayFilter) => {
+  if (dayFilter === "day1") return Number(Boolean(record?.day1));
+  if (dayFilter === "day2") return Number(Boolean(record?.day2));
+  if (dayFilter === "day3") return Number(Boolean(record?.day3));
+  return getAttendedDays(record);
+};
+
 export function buildDashboardMetrics(
   students: Student[],
   sections: Section[],
   attendance: Attendance[],
+  dayFilter: DayFilter,
 ): DashboardMetrics {
   const totalStudents = students.length;
   const totalSections = sections.length;
-  const day1CheckedIn = attendance.filter((record) => Boolean(record.day1)).length;
-  const day2CheckedIn = attendance.filter((record) => Boolean(record.day2)).length;
-  const day3CheckedIn = attendance.filter((record) => Boolean(record.day3)).length;
-  const totalCheckedIn = day1CheckedIn + day2CheckedIn + day3CheckedIn;
-  const maxPossibleCheckIns = totalStudents * 3;
+  const day1CheckedIn = attendance.filter((record) =>
+    Boolean(record.day1),
+  ).length;
+  const day2CheckedIn = attendance.filter((record) =>
+    Boolean(record.day2),
+  ).length;
+  const day3CheckedIn = attendance.filter((record) =>
+    Boolean(record.day3),
+  ).length;
+  const isAllTime = dayFilter === "all";
+  const selectedDayLabel =
+    dayFilter === "day1"
+      ? "Day 1"
+      : dayFilter === "day2"
+        ? "Day 2"
+        : dayFilter === "day3"
+          ? "Day 3"
+          : "3 days";
+  const totalCheckedIn = isAllTime
+    ? day1CheckedIn + day2CheckedIn + day3CheckedIn
+    : dayFilter === "day1"
+      ? day1CheckedIn
+      : dayFilter === "day2"
+        ? day2CheckedIn
+        : day3CheckedIn;
+  const maxPossibleCheckIns = totalStudents * (isAllTime ? 3 : 1);
   const attendanceRate =
     maxPossibleCheckIns === 0
       ? 0
@@ -72,7 +75,7 @@ export function buildDashboardMetrics(
 
   for (const student of students) {
     const record = attendanceByStudentId.get(student.id);
-    const studentCheckIns = getAttendedDays(record);
+    const studentCheckIns = getDayCheckIn(record, dayFilter);
     checkInsBySectionId.set(
       student.section_id,
       (checkInsBySectionId.get(student.section_id) ?? 0) + studentCheckIns,
@@ -81,16 +84,21 @@ export function buildDashboardMetrics(
 
   const atRiskStudents = students.reduce((count, student) => {
     const record = attendanceByStudentId.get(student.id);
-    return getAttendedDays(record) <= 1 ? count + 1 : count;
+    if (isAllTime) {
+      return getAttendedDays(record) <= 1 ? count + 1 : count;
+    }
+    return getDayCheckIn(record, dayFilter) === 0 ? count + 1 : count;
   }, 0);
 
   const topSections: TopSectionRow[] = sections
     .map((section) => {
       const sectionStudents = studentsBySectionId.get(section.id) ?? 0;
       const sectionCheckIns = checkInsBySectionId.get(section.id) ?? 0;
-      const sectionMaxCheckIns = sectionStudents * 3;
+      const sectionMaxCheckIns = sectionStudents * (isAllTime ? 3 : 1);
       const sectionRate =
-        sectionMaxCheckIns === 0 ? 0 : (sectionCheckIns / sectionMaxCheckIns) * 100;
+        sectionMaxCheckIns === 0
+          ? 0
+          : (sectionCheckIns / sectionMaxCheckIns) * 100;
 
       return {
         section: section.name,
@@ -135,14 +143,16 @@ export function buildDashboardMetrics(
     )[0];
     alerts.push({
       title: `${lowestTopSection.section} attendance is below target`,
-      details: `Current 3-day section rate is ${lowestTopSection.rate} (target: 80%).`,
+      details: `Current ${selectedDayLabel.toLowerCase()} section rate is ${lowestTopSection.rate} (target: 80%).`,
       badge: "Watch",
     });
   }
 
   alerts.push({
     title: `${atRiskStudents.toLocaleString()} students are at risk`,
-    details: "Students attended 0-1 out of 3 event days.",
+    details: isAllTime
+      ? "Students attended 0-1 out of 3 event days."
+      : `Students were absent on ${selectedDayLabel}.`,
     badge: "High",
   });
 
@@ -156,7 +166,9 @@ export function buildDashboardMetrics(
   }
 
   return {
-    eventWindowLabel: "3-day university event",
+    eventWindowLabel: isAllTime
+      ? "3-day university event"
+      : `${selectedDayLabel} of university event`,
     statCards: [
       {
         label: "Total Students Registered",
@@ -170,19 +182,27 @@ export function buildDashboardMetrics(
         note: "From sections master list",
       },
       {
-        label: "Students Checked In (3 days)",
+        label: isAllTime
+          ? "Students Checked In (3 days)"
+          : `Students Checked In (${selectedDayLabel})`,
         value: totalCheckedIn.toLocaleString(),
         note: "From attendance records",
       },
       {
-        label: "Attendance Rate (3 days)",
+        label: isAllTime
+          ? "Attendance Rate (3 days)"
+          : `Attendance Rate (${selectedDayLabel})`,
         value: `${attendanceRate.toFixed(1)}%`,
-        note: "Checked-ins / (students x 3 days)",
+        note: isAllTime
+          ? "Checked-ins / (students x 3 days)"
+          : "Checked-ins / students",
       },
       {
         label: "At-Risk Students",
         value: atRiskStudents.toLocaleString(),
-        note: "Attended 0-1 out of 3 days",
+        note: isAllTime
+          ? "Attended 0-1 out of 3 days"
+          : `Absent on ${selectedDayLabel}`,
       },
     ],
     trendRows,

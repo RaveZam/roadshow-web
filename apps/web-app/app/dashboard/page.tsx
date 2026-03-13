@@ -8,8 +8,7 @@ import SectionListPage from "../section-list/page";
 import AttendanceList from "../attendance/AttendanceList";
 import Header from "../components/header";
 import { useDashboardMetrics } from "./hooks/useDashboardMetrics";
-
-export type DayFilter = "all" | "day1" | "day2" | "day3";
+import type { DayFilter } from "./types/master-types";
 
 const DAY_FILTER_LABELS: Record<DayFilter, string> = {
   all: "All-Time",
@@ -23,6 +22,7 @@ export default function DashboardPage() {
   const [dayFilter, setDayFilter] = useState<DayFilter>("all");
   const { metrics, isLoadingMetrics, metricsError } = useDashboardMetrics(
     active === "Dashboard",
+    dayFilter,
   );
 
   return (

@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { fetchDashboardMetrics } from "@/app/dashboard/services/dashboardMetrics";
-import type { DashboardMetrics } from "../types/master-types";
+import type { DashboardMetrics, DayFilter } from "../types/master-types";
 
-export function useDashboardMetrics(enabled: boolean) {
+export function useDashboardMetrics(enabled: boolean, dayFilter: DayFilter) {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [isLoadingMetrics, setIsLoadingMetrics] = useState(true);
   const [metricsError, setMetricsError] = useState("");
@@ -14,7 +14,7 @@ export function useDashboardMetrics(enabled: boolean) {
       setIsLoadingMetrics(true);
       setMetricsError("");
 
-      const result = await fetchDashboardMetrics();
+      const result = await fetchDashboardMetrics(dayFilter);
       setIsLoadingMetrics(false);
 
       if (result.error) {
@@ -28,7 +28,7 @@ export function useDashboardMetrics(enabled: boolean) {
     if (enabled) {
       loadMetrics();
     }
-  }, [enabled]);
+  }, [dayFilter, enabled]);
 
   return { metrics, isLoadingMetrics, metricsError };
 }

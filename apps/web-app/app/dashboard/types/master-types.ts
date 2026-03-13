@@ -5,6 +5,8 @@ export type DashboardStatCard = {
   highlighted?: boolean;
 };
 
+export type DayFilter = "all" | "day1" | "day2" | "day3";
+
 export type TrendRow = {
   day: string;
   checkedIn: number;

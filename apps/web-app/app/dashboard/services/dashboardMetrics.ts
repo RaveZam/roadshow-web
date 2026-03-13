@@ -2,9 +2,9 @@ import { fetchSections } from "@/app/section-list/services/sections";
 import { fetchStudents } from "@/app/student-list/services/students";
 import { fetchAttendance } from "@/app/attendance/services/attendance";
 import { buildDashboardMetrics } from "@/app/dashboard/helpers/dashboardMetrics";
-import type { DashboardMetrics } from "../types/master-types";
+import type { DashboardMetrics, DayFilter } from "../types/master-types";
 
-export async function fetchDashboardMetrics(): Promise<{
+export async function fetchDashboardMetrics(dayFilter: DayFilter): Promise<{
   data: DashboardMetrics | null;
   error: Error | null;
 }> {
@@ -31,7 +31,7 @@ export async function fetchDashboardMetrics(): Promise<{
   const attendance = attendanceResult.data ?? [];
 
   return {
-    data: buildDashboardMetrics(students, sections, attendance),
+    data: buildDashboardMetrics(students, sections, attendance, dayFilter),
     error: null,
   };
 }
