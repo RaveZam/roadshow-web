@@ -5,7 +5,6 @@ import { fetchSections, type Section } from "../section-list/services/sections";
 import {
   createStudent,
   fetchStudentsForExport,
-  fetchStudents,
   STUDENTS_PAGE_SIZE,
   type Student,
 } from "./services/students";
@@ -19,7 +18,6 @@ export default function StudentsList() {
   const [search, setSearch] = useState("");
   const [selectedSectionId, setSelectedSectionId] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalStudents, setTotalStudents] = useState(0);
 
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [studentId, setStudentId] = useState("");
@@ -31,13 +29,11 @@ export default function StudentsList() {
   const [isExportingQr, setIsExportingQr] = useState(false);
   const [exportError, setExportError] = useState("");
 
-  const totalPages = Math.max(1, Math.ceil(totalStudents / STUDENTS_PAGE_SIZE));
-
-  const loadStudents = async (page: number, sectionId: string) => {
+  const loadStudents = async (sectionId: string) => {
     setIsFetching(true);
     setError("");
 
-    const studentsResult = await fetchStudents(page, sectionId);
+    const studentsResult = await fetchStudentsForExport(sectionId);
 
     setIsFetching(false);
 
@@ -47,7 +43,6 @@ export default function StudentsList() {
     }
 
     setStudents(studentsResult.data ?? []);
-    setTotalStudents(studentsResult.count ?? 0);
   };
 
   useEffect(() => {
@@ -71,33 +66,35 @@ export default function StudentsList() {
   }, []);
 
   useEffect(() => {
-    loadStudents(currentPage, selectedSectionId);
-  }, [currentPage, selectedSectionId]);
+    loadStudents(selectedSectionId);
+  }, [selectedSectionId]);
 
-  const sectionNameById = useMemo(() => {
-    return new Map(sections.map((section) => [section.id, section.name]));
-  }, [sections]);
+  const sectionNameById = useMemo(
+    () => new Map(sections.map((section) => [section.id, section.name])),
+    [sections],
+  );
 
   const filteredStudents = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase();
-
-    return students.filter((student) => {
-      const matchesSection =
-        selectedSectionId === "all" || student.section_id === selectedSectionId;
-
-      if (!matchesSection) return false;
-
-      if (!normalizedSearch) return true;
-
-      const studentCode = student.student_id.toLowerCase();
-      const fullName =
-        `${student.first_name} ${student.last_name}`.toLowerCase();
-      return (
-        fullName.includes(normalizedSearch) ||
-        studentCode.includes(normalizedSearch)
-      );
+    const term = search.trim().toLowerCase();
+    if (!term) return students;
+    return students.filter((s) => {
+      const name = `${s.first_name} ${s.last_name}`.toLowerCase();
+      return name.includes(term) || s.student_id.toLowerCase().includes(term);
     });
-  }, [search, selectedSectionId, students]);
+  }, [students, search]);
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredStudents.length / STUDENTS_PAGE_SIZE),
+  );
+  const displayStudents = useMemo(
+    () =>
+      filteredStudents.slice(
+        (currentPage - 1) * STUDENTS_PAGE_SIZE,
+        currentPage * STUDENTS_PAGE_SIZE,
+      ),
+    [filteredStudents, currentPage],
+  );
 
   const resetAddForm = () => {
     setStudentId("");
@@ -146,11 +143,8 @@ export default function StudentsList() {
     }
 
     if (data) {
-      if (currentPage === 1) {
-        await loadStudents(1, selectedSectionId);
-      } else {
-        setCurrentPage(1);
-      }
+      await loadStudents(selectedSectionId);
+      setCurrentPage(1);
     }
 
     closeAddModal();
@@ -210,7 +204,10 @@ export default function StudentsList() {
           <input
             aria-label="Search students"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setCurrentPage(1);
+            }}
             placeholder="Search students..."
             className="min-w-[200px] flex-1 rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-emerald-300"
           />
@@ -232,7 +229,7 @@ export default function StudentsList() {
           <button
             type="button"
             onClick={onExportStudentQr}
-            disabled={isExportingQr || isFetching || totalStudents === 0}
+            disabled={isExportingQr || isFetching || students.length === 0}
             className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-70"
           >
             {isExportingQr ? "Extracting..." : "Extract Student QR's"}
@@ -272,12 +269,12 @@ export default function StudentsList() {
                   Loading students...
                 </p>
               </div>
-            ) : filteredStudents.length === 0 ? (
+            ) : displayStudents.length === 0 ? (
               <p className="px-3 py-4 text-sm text-zinc-500">
                 No students found.
               </p>
             ) : (
-              filteredStudents.map((student) => (
+              displayStudents.map((student) => (
                 <div
                   key={student.id}
                   className="grid grid-cols-[1fr_1fr_auto] items-center gap-4 px-3 py-2 text-sm text-zinc-700"

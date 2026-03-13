@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { fetchSections, type Section } from "../section-list/services/sections";
 import {
-  fetchStudents,
   fetchStudentsForExport,
   STUDENTS_PAGE_SIZE,
   type Student,
@@ -45,7 +44,6 @@ export default function AttendanceList() {
   const [search, setSearch] = useState("");
   const [selectedSectionId, setSelectedSectionId] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalStudents, setTotalStudents] = useState(0);
   const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
@@ -63,13 +61,11 @@ export default function AttendanceList() {
     initializeSections();
   }, []);
 
-  const totalPages = Math.max(1, Math.ceil(totalStudents / STUDENTS_PAGE_SIZE));
-
-  const loadAttendance = async (page: number, sectionId: string) => {
+  const loadAttendance = async (sectionId: string) => {
     setIsFetching(true);
     setError("");
 
-    const studentsResult = await fetchStudents(page, sectionId);
+    const studentsResult = await fetchStudentsForExport(sectionId);
 
     if (studentsResult.error) {
       setIsFetching(false);
@@ -77,18 +73,17 @@ export default function AttendanceList() {
       return;
     }
 
-    const pagedStudents = studentsResult.data ?? [];
-    setStudents(pagedStudents);
-    setTotalStudents(studentsResult.count ?? 0);
+    const allStudents = studentsResult.data ?? [];
+    setStudents(allStudents);
 
-    if (pagedStudents.length === 0) {
+    if (allStudents.length === 0) {
       setAttendance([]);
       setIsFetching(false);
       return;
     }
 
     const attendanceResult = await fetchAttendance(
-      pagedStudents.map((student) => student.id),
+      allStudents.map((student) => student.id),
     );
 
     setIsFetching(false);
@@ -103,11 +98,10 @@ export default function AttendanceList() {
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
-      void loadAttendance(currentPage, selectedSectionId);
+      void loadAttendance(selectedSectionId);
     }, 0);
-
     return () => window.clearTimeout(timeoutId);
-  }, [currentPage, selectedSectionId]);
+  }, [selectedSectionId]);
 
   const rows = useMemo(() => {
     const attendanceByStudentId = new Map(
@@ -138,24 +132,26 @@ export default function AttendanceList() {
   }, [attendance, sections, students]);
 
   const filteredRows = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase();
-
+    const term = search.trim().toLowerCase();
+    if (!term) return rows;
     return rows.filter((row) => {
-      const matchesSection =
-        selectedSectionId === "all" || row.sectionId === selectedSectionId;
-
-      if (!matchesSection) return false;
-
-      if (!normalizedSearch) return true;
-
-      const fullName = `${row.firstName} ${row.lastName}`.toLowerCase();
-      const studentCode = row.studentId.toLowerCase();
-      return (
-        fullName.includes(normalizedSearch) ||
-        studentCode.includes(normalizedSearch)
-      );
+      const name = `${row.firstName} ${row.lastName}`.toLowerCase();
+      return name.includes(term) || row.studentId.toLowerCase().includes(term);
     });
-  }, [rows, search, selectedSectionId]);
+  }, [rows, search]);
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredRows.length / STUDENTS_PAGE_SIZE),
+  );
+  const displayRows = useMemo(
+    () =>
+      filteredRows.slice(
+        (currentPage - 1) * STUDENTS_PAGE_SIZE,
+        currentPage * STUDENTS_PAGE_SIZE,
+      ),
+    [filteredRows, currentPage],
+  );
 
   const handleExtractRecords = async () => {
     setIsExporting(true);
@@ -267,7 +263,10 @@ export default function AttendanceList() {
         <input
           aria-label="Search students"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setCurrentPage(1);
+          }}
           placeholder="Search by name or student ID..."
           className="min-w-[200px] flex-1 rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-emerald-300"
         />
@@ -289,7 +288,7 @@ export default function AttendanceList() {
         <button
           type="button"
           onClick={handleExtractRecords}
-          disabled={isFetching || isExporting || totalStudents === 0}
+          disabled={isFetching || isExporting || students.length === 0}
           className="rounded-md border border-emerald-600 bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:border-emerald-400 disabled:bg-emerald-400"
         >
           {isExporting ? "Extracting..." : "Extract Record"}
@@ -314,10 +313,10 @@ export default function AttendanceList() {
               <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-200 border-t-emerald-600" />
               <p className="mt-2 text-sm text-zinc-500">Loading attendance...</p>
             </div>
-          ) : filteredRows.length === 0 ? (
+          ) : displayRows.length === 0 ? (
             <p className="px-3 py-4 text-sm text-zinc-500">No students found.</p>
           ) : (
-            filteredRows.map((row) => (
+            displayRows.map((row) => (
               <div
                 key={row.id}
                 className="grid grid-cols-[2fr_1.5fr_1fr_1fr_1fr_1fr] items-center gap-4 px-3 py-2 text-sm text-zinc-700"
