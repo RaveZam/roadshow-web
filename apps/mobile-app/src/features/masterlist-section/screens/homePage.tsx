@@ -119,20 +119,6 @@ export default function HomePage() {
     <ThemedView style={styles.screen}>
       <SafeAreaView style={styles.safeArea}>
         <ThemedView type="backgroundElement" style={styles.listCard}>
-          <View style={styles.topActions}>
-            <Pressable
-              onPress={() => setShowSyncSnackbar((prev) => !prev)}
-              style={({ pressed }) => [
-                styles.toggleSnackbarButton,
-                pressed && styles.pressed,
-              ]}
-            >
-              <ThemedText type="smallBold" style={styles.toggleSnackbarText}>
-                {showSyncSnackbar ? "Hide sync notif" : "Show sync notif"}
-              </ThemedText>
-            </Pressable>
-          </View>
-
           <View style={styles.controlsRow}>
             <View style={styles.searchContainer}>
               <TextInput
@@ -238,10 +224,6 @@ export default function HomePage() {
             ))}
           </ScrollView>
         </ThemedView>
-        <SyncedSnackbar
-          visible={showSyncSnackbar}
-          message="Synced successfully"
-        />
 
         <Pressable
           onPress={() => router.push("/qr-section")}

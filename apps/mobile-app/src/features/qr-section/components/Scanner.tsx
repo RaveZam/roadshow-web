@@ -1,18 +1,27 @@
-import { CameraView } from "expo-camera";
+import { CameraView, useCameraPermissions } from "expo-camera";
 import { useEffect, useRef, useState } from "react";
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Button, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import {
   getStudentById,
   type StudentRecord,
 } from "../../../../lib/sqlite/dao/get-student-dao";
-import { scanStudent } from "../hooks/useScanner";
+import { hasStudentAttendedToday, scanStudent } from "../hooks/useScanner";
 
 export default function Scanner() {
   const lastScanAtRef = useRef(0);
   const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showAlreadyAttendedModal, setShowAlreadyAttendedModal] =
+    useState(false);
   const [lastScannedStudent, setLastScannedStudent] =
     useState<StudentRecord | null>(null);
+  const [permission, requestPermission] = useCameraPermissions();
+
+  useEffect(() => {
+    if (!permission?.granted) {
+      requestPermission();
+    }
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -21,6 +30,15 @@ export default function Scanner() {
       }
     };
   }, []);
+
+  if (!permission?.granted) {
+    return (
+      <View style={styles.container}>
+        <Text>Camera permission is required.</Text>
+        <Button title="Grant Permission" onPress={requestPermission} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -31,13 +49,19 @@ export default function Scanner() {
         }}
         onBarcodeScanned={(result) => {
           const now = Date.now();
-          if (now - lastScanAtRef.current < 1000) return;
+          if (now - lastScanAtRef.current < 2000) return;
           lastScanAtRef.current = now;
 
           const studentId = result.data.trim();
           if (!studentId) return;
 
           try {
+            if (hasStudentAttendedToday(studentId)) {
+              const student = getStudentById(studentId);
+              setLastScannedStudent(student ?? null);
+              setShowAlreadyAttendedModal(true);
+              return;
+            }
             scanStudent(studentId);
             const student = getStudentById(studentId);
             setLastScannedStudent(student ?? null);
@@ -63,21 +87,55 @@ export default function Scanner() {
       >
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.title}>Success</Text>
-            <Text style={styles.subtitle}>Student has been scanned.</Text>
-            <Text style={styles.studentId}>
-              Name: {lastScannedStudent?.first_name ?? "Unknown"}{" "}
-              {lastScannedStudent?.last_name ?? "Student"}
+            <Text style={styles.modalTitle}>Scan successful</Text>
+            <Text style={styles.subtitle}>
+              Student has been marked present today.
             </Text>
-            <Text style={styles.studentId}>
-              ID: {lastScannedStudent?.student_id ?? "Not found"}
-            </Text>
-
+            {lastScannedStudent && (
+              <Text style={styles.studentId}>
+                {lastScannedStudent.first_name} {lastScannedStudent.last_name} (
+                {lastScannedStudent.student_id})
+              </Text>
+            )}
             <Pressable
               onPress={() => setShowSuccessModal(false)}
-              style={({ pressed }) => [styles.button, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.modalButton,
+                pressed && styles.pressed,
+              ]}
             >
-              <Text style={styles.buttonText}>Close</Text>
+              <Text style={styles.buttonText}>OK</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={showAlreadyAttendedModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowAlreadyAttendedModal(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Student already attended</Text>
+            <Text style={styles.subtitle}>
+              This student has already been marked present today.
+            </Text>
+            {lastScannedStudent && (
+              <Text style={styles.studentId}>
+                {lastScannedStudent.first_name} {lastScannedStudent.last_name} (
+                {lastScannedStudent.student_id})
+              </Text>
+            )}
+            <Pressable
+              onPress={() => setShowAlreadyAttendedModal(false)}
+              style={({ pressed }) => [
+                styles.modalButton,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.buttonText}>OK</Text>
             </Pressable>
           </View>
         </View>
@@ -104,10 +162,10 @@ const styles = StyleSheet.create({
     padding: 20,
     gap: 8,
   },
-  title: {
+  modalTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#16a34a",
+    color: "#14532d",
   },
   subtitle: {
     fontSize: 14,
@@ -118,18 +176,20 @@ const styles = StyleSheet.create({
     color: "#64748b",
     marginBottom: 8,
   },
-  button: {
-    minHeight: 40,
-    borderRadius: 8,
+  modalButton: {
+    minHeight: 54,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#16a34a",
+    backgroundColor: "#14532d",
+    borderWidth: 1,
+    borderColor: "#22c55e",
   },
   buttonText: {
     color: "#ffffff",
     fontWeight: "600",
   },
   pressed: {
-    opacity: 0.8,
+    opacity: 0.75,
   },
 });

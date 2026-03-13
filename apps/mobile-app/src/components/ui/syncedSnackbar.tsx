@@ -7,6 +7,8 @@ import { ThemedText } from "@/components/themed-text";
 type SyncedSnackbarProps = {
   visible: boolean;
   message: string;
+  synced: boolean;
+  syncedCount: number;
   description?: string;
   onClose?: () => void;
 };
@@ -14,10 +16,14 @@ type SyncedSnackbarProps = {
 export default function SyncedSnackbar({
   visible,
   message,
-  description = "Synced X Students",
+  synced,
+  syncedCount,
+  description,
   onClose,
 }: SyncedSnackbarProps) {
-  if (!visible) return null;
+  if (!visible || !synced) return null;
+
+  const effectiveDescription = description ?? `Synced ${syncedCount} Students`;
 
   return (
     <View pointerEvents="box-none" style={styles.container}>
@@ -32,7 +38,7 @@ export default function SyncedSnackbar({
               {message}
             </ThemedText>
             <ThemedText type="small" style={styles.description}>
-              {description}
+              {effectiveDescription}
             </ThemedText>
           </View>
 
@@ -55,10 +61,10 @@ export default function SyncedSnackbar({
 const styles = StyleSheet.create({
   container: {
     position: "absolute",
-    top: 12,
+    top: 50,
     right: 12,
     left: 12,
-    zIndex: 40,
+    zIndex: 9999,
   },
   snackbar: {
     backgroundColor: "#14532d",

@@ -5,12 +5,13 @@ import { Stack, useRouter } from "expo-router";
 import React, { useEffect } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { AnimatedSplashOverlay } from "@/components/animated-icon";
+import SyncedSnackbar from "@/components/ui/syncedSnackbar";
 import bootstrapDatabase from "../../lib/sqlite/bootstrap";
 import { useSync } from "../../lib/services/useSync";
 
 export default function TabLayout() {
   const router = useRouter();
-  useSync();
+  const { syncedSnackbarVisible, syncedCount, hideSyncedSnackbar } = useSync();
 
   const [fontsLoaded] = useFonts({
     Geist: require("../../assets/fonts/Geist-Variable.ttf"),
@@ -27,6 +28,13 @@ export default function TabLayout() {
   return (
     <ThemeProvider value={DefaultTheme}>
       <AnimatedSplashOverlay />
+      <SyncedSnackbar
+        visible={syncedSnackbarVisible}
+        synced={syncedSnackbarVisible}
+        syncedCount={syncedCount}
+        message="Sync complete"
+        onClose={hideSyncedSnackbar}
+      />
       <Stack
         screenOptions={{
           headerShown: false,

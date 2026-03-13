@@ -1,30 +1,44 @@
 import { checkWifi } from "@/hooks/useWifiChecker";
 import { syncOutbox } from "./useOutboxSynx";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export function useSync(intervalMs = 10000) {
   const syncingRef = useRef(false);
-  useEffect(() => {
-    const sync = async () => {
-      if (syncingRef.current) return;
-      syncingRef.current = true;
-      console.log("Syncing...");
-      try {
-        const hasWifi = await checkWifi();
+  const [snackbarVisible, setSnackbarVisible] = useState(false);
+  const [syncedCount, setSyncedCount] = useState(0);
 
-        if (!hasWifi) {
-          console.log("No wifi connection");
-          return;
-        }
-        await syncOutbox();
-        console.log("Synced");
-      } finally {
-        syncingRef.current = false;
+  const sync = useCallback(async () => {
+    if (syncingRef.current) return;
+    syncingRef.current = true;
+    try {
+      const hasWifi = await checkWifi();
+      if (!hasWifi) return;
+      const { synced, failed } = await syncOutbox();
+      console.log(`Synced ${synced} out of ${synced + failed} entries`);
+      if (synced > 0) {
+        setSyncedCount(synced);
+        setSnackbarVisible(true);
+        setTimeout(() => setSnackbarVisible(false), 3000);
       }
-    };
+    } finally {
+      syncingRef.current = false;
+    }
+  }, []);
 
+  useEffect(() => {
     sync();
     const interval = setInterval(sync, intervalMs);
     return () => clearInterval(interval);
-  }, [intervalMs]);
+  }, [intervalMs, sync]);
+
+  const hideSyncedSnackbar = useCallback(() => {
+    setSnackbarVisible(false);
+  }, []);
+
+  return {
+    sync,
+    syncedSnackbarVisible: snackbarVisible,
+    syncedCount,
+    hideSyncedSnackbar,
+  };
 }
