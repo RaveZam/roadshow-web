@@ -89,7 +89,8 @@ export default function StudentsList() {
       if (!normalizedSearch) return true;
 
       const studentCode = student.student_id.toLowerCase();
-      const fullName = `${student.first_name} ${student.last_name}`.toLowerCase();
+      const fullName =
+        `${student.first_name} ${student.last_name}`.toLowerCase();
       return (
         fullName.includes(normalizedSearch) ||
         studentCode.includes(normalizedSearch)
@@ -117,7 +118,12 @@ export default function StudentsList() {
 
   const onSubmitAddStudent = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!studentId.trim() || !firstName.trim() || !lastName.trim() || !newSectionId) {
+    if (
+      !studentId.trim() ||
+      !firstName.trim() ||
+      !lastName.trim() ||
+      !newSectionId
+    ) {
       return;
     }
 
@@ -165,7 +171,7 @@ export default function StudentsList() {
           id: student.id,
           student_id: student.student_id,
           full_name: `${student.first_name} ${student.last_name}`,
-        }))
+        })),
       );
 
       const objectUrl = URL.createObjectURL(zipBlob);
@@ -178,7 +184,9 @@ export default function StudentsList() {
       URL.revokeObjectURL(objectUrl);
     } catch (error) {
       setExportError(
-        error instanceof Error ? error.message : "Failed to export student QR codes."
+        error instanceof Error
+          ? error.message
+          : "Failed to export student QR codes.",
       );
     } finally {
       setIsExportingQr(false);
@@ -230,7 +238,9 @@ export default function StudentsList() {
         </div>
 
         {error ? <p className="mb-3 text-sm text-red-600">{error}</p> : null}
-        {exportError ? <p className="mb-3 text-sm text-red-600">{exportError}</p> : null}
+        {exportError ? (
+          <p className="mb-3 text-sm text-red-600">{exportError}</p>
+        ) : null}
         {sections.length === 0 ? (
           <p className="mb-3 text-sm text-zinc-500">
             Add a section first before adding students.
@@ -248,10 +258,14 @@ export default function StudentsList() {
             {isFetching ? (
               <div className="flex flex-col items-center justify-center py-6">
                 <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-200 border-t-emerald-600" />
-                <p className="mt-2 text-sm text-zinc-500">Loading students...</p>
+                <p className="mt-2 text-sm text-zinc-500">
+                  Loading students...
+                </p>
               </div>
             ) : filteredStudents.length === 0 ? (
-              <p className="px-3 py-4 text-sm text-zinc-500">No students found.</p>
+              <p className="px-3 py-4 text-sm text-zinc-500">
+                No students found.
+              </p>
             ) : (
               filteredStudents.map((student) => (
                 <div
@@ -262,11 +276,19 @@ export default function StudentsList() {
                     <p>
                       {student.first_name} {student.last_name}
                     </p>
-                    <p className="text-xs text-zinc-500">{student.student_id}</p>
+                    <p className="text-xs text-zinc-500">
+                      {student.student_id}
+                    </p>
                   </div>
-                  <p>{sectionNameById.get(student.section_id) ?? "Unknown section"}</p>
+                  <p>
+                    {sectionNameById.get(student.section_id) ??
+                      "Unknown section"}
+                  </p>
                   <p className="text-xs text-zinc-500">
-                    {new Date(student.created_at).toLocaleString()}
+                    {new Date(student.created_at + "Z").toLocaleString(
+                      "en-PH",
+                      { timeZone: "Asia/Manila" },
+                    )}
                   </p>
                 </div>
               ))
@@ -335,7 +357,9 @@ export default function StudentsList() {
                 ))}
               </select>
 
-              {addError ? <p className="text-sm text-red-600">{addError}</p> : null}
+              {addError ? (
+                <p className="text-sm text-red-600">{addError}</p>
+              ) : null}
 
               <div className="mt-4 flex gap-2">
                 <button

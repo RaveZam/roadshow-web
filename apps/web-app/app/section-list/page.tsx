@@ -198,7 +198,10 @@ export default function SectionListPage() {
                   </div>
 
                   <p className="text-xs text-zinc-500">
-                    {new Date(section.created_at).toLocaleString()}
+                    {new Date(section.created_at + "Z").toLocaleString(
+                      "en-PH",
+                      { timeZone: "Asia/Manila" },
+                    )}
                   </p>
 
                   <div className="flex items-center justify-end">
