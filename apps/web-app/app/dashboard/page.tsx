@@ -9,6 +9,7 @@ import AttendanceList from "../attendance/AttendanceList";
 import Header from "../components/header";
 import { useDashboardMetrics } from "./hooks/useDashboardMetrics";
 import type { DayFilter } from "./types/master-types";
+import GroupedBarChart from "./components/GroupedBarChart";
 
 const DAY_FILTER_LABELS: Record<DayFilter, string> = {
   all: "All-Time",
@@ -81,20 +82,7 @@ export default function DashboardPage() {
                           </p>
                         </div>
 
-                        <div className="divide-y divide-zinc-100 rounded-lg border border-zinc-200">
-                          {metrics.trendRows.map((row) => (
-                            <div
-                              key={row.day}
-                              className="grid grid-cols-[1fr_auto_auto] items-center gap-4 px-3 py-3 text-sm text-zinc-700"
-                            >
-                              <p className="font-medium">{row.day}</p>
-                              <p>{row.checkedIn.toLocaleString()} checked in</p>
-                              <p className="text-xs text-zinc-500">
-                                {row.rate}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
+                        <GroupedBarChart rows={metrics.trendRows} />
                       </div>
 
                       <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">

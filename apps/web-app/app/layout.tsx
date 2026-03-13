@@ -15,6 +15,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Roadshow Attendance",
   description: "Track and manage roadshow attendance.",
+  icons: {
+    icon: "https://res.cloudinary.com/dcdgu2fxc/image/upload/v1773372695/isu-logo_nnhlgl.png",
+  },
 };
 
 export default function RootLayout({

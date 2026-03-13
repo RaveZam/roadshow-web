@@ -44,9 +44,11 @@ export default function DashboardSidebar({ active, onSelect }: Props) {
       <aside className="flex h-full w-64 flex-none flex-col overflow-hidden border-r border-zinc-200 bg-white">
         <div className="px-4 py-5">
           <div className="flex items-center gap-3">
-            <div className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-600 text-sm font-semibold text-white">
-              ••
-            </div>
+            <img
+              src="https://res.cloudinary.com/dcdgu2fxc/image/upload/v1773372695/isu-logo_nnhlgl.png"
+              alt="ISU logo"
+              className="h-9 w-9 rounded-xl object-contain"
+            />
             <div>
               <p className="text-sm font-semibold text-zinc-800">
                 Roadshow Attendance
