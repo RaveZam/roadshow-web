@@ -8,6 +8,12 @@ import {
   type Student,
 } from "../student-list/services/students";
 import { fetchAttendance, type Attendance } from "./services/attendance";
+import {
+  Listbox,
+  ListboxButton,
+  ListboxOption,
+  ListboxOptions,
+} from "@headlessui/react";
 
 type AttendanceRow = {
   id: string;
@@ -107,7 +113,9 @@ export default function AttendanceList() {
     const attendanceByStudentId = new Map(
       attendance.map((record) => [record.student_id, record]),
     );
-    const sectionById = new Map(sections.map((section) => [section.id, section.name]));
+    const sectionById = new Map(
+      sections.map((section) => [section.id, section.name]),
+    );
 
     return students.map((student): AttendanceRow => {
       const record = attendanceByStudentId.get(student.id);
@@ -157,7 +165,8 @@ export default function AttendanceList() {
     setIsExporting(true);
     setError("");
 
-    const exportStudentsResult = await fetchStudentsForExport(selectedSectionId);
+    const exportStudentsResult =
+      await fetchStudentsForExport(selectedSectionId);
 
     if (exportStudentsResult.error) {
       setIsExporting(false);
@@ -184,9 +193,14 @@ export default function AttendanceList() {
     }
 
     const attendanceByStudentId = new Map(
-      (exportAttendanceResult.data ?? []).map((record) => [record.student_id, record]),
+      (exportAttendanceResult.data ?? []).map((record) => [
+        record.student_id,
+        record,
+      ]),
     );
-    const sectionById = new Map(sections.map((section) => [section.id, section.name]));
+    const sectionById = new Map(
+      sections.map((section) => [section.id, section.name]),
+    );
     const exportRows = exportStudents.map((student) => {
       const record = attendanceByStudentId.get(student.id);
       const day1 = record ? Boolean(record.day1) : false;
@@ -238,8 +252,8 @@ export default function AttendanceList() {
     const sectionLabel =
       selectedSectionId === "all"
         ? "all-sections"
-        : sections.find((section) => section.id === selectedSectionId)?.name ??
-          "section";
+        : (sections.find((section) => section.id === selectedSectionId)?.name ??
+          "section");
 
     const safeSectionLabel = sectionLabel
       .toLowerCase()
@@ -270,21 +284,59 @@ export default function AttendanceList() {
           placeholder="Search by name or student ID..."
           className="min-w-[200px] flex-1 rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-emerald-300"
         />
-        <select
+        <Listbox
           value={selectedSectionId}
-          onChange={(e) => {
-            setSelectedSectionId(e.target.value);
+          onChange={(value) => {
+            setSelectedSectionId(value);
             setCurrentPage(1);
           }}
-          className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 focus:outline-none focus:ring-1 focus:ring-emerald-300"
         >
-          <option value="all">All sections</option>
-          {sections.map((section) => (
-            <option key={section.id} value={section.id}>
-              {section.name}
-            </option>
-          ))}
-        </select>
+          <div className="relative">
+            <ListboxButton className="relative w-full min-w-[140px] cursor-default rounded-md border border-zinc-200 bg-white py-2 pl-3 pr-8 text-left text-sm text-zinc-700 focus:outline-none focus:ring-1 focus:ring-emerald-300">
+              <span className="block truncate">
+                {selectedSectionId === "all"
+                  ? "All sections"
+                  : (sections.find((s) => s.id === selectedSectionId)?.name ??
+                    "All sections")}
+              </span>
+              <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                <svg
+                  className="h-4 w-4 text-zinc-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 9l4-4 4 4m0 6l-4 4-4-4"
+                  />
+                </svg>
+              </span>
+            </ListboxButton>
+            <ListboxOptions className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border border-zinc-200 bg-white py-1 text-sm shadow-lg focus:outline-none">
+              <ListboxOption
+                value="all"
+                className="relative cursor-default select-none py-2 pl-3 pr-9 text-zinc-700 ui-selected:bg-emerald-50 ui-selected:text-emerald-900 ui-active:bg-zinc-100"
+              >
+                <span className="block truncate font-normal">All sections</span>
+              </ListboxOption>
+              {sections.map((section) => (
+                <ListboxOption
+                  key={section.id}
+                  value={section.id}
+                  className="relative cursor-default select-none py-2 pl-3 pr-9 text-zinc-700 ui-selected:bg-emerald-50 ui-selected:text-emerald-900 ui-active:bg-zinc-100"
+                >
+                  <span className="block truncate font-normal">
+                    {section.name}
+                  </span>
+                </ListboxOption>
+              ))}
+            </ListboxOptions>
+          </div>
+        </Listbox>
         <button
           type="button"
           onClick={handleExtractRecords}
@@ -311,10 +363,14 @@ export default function AttendanceList() {
           {isFetching ? (
             <div className="flex flex-col items-center justify-center py-6">
               <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-200 border-t-emerald-600" />
-              <p className="mt-2 text-sm text-zinc-500">Loading attendance...</p>
+              <p className="mt-2 text-sm text-zinc-500">
+                Loading attendance...
+              </p>
             </div>
           ) : displayRows.length === 0 ? (
-            <p className="px-3 py-4 text-sm text-zinc-500">No students found.</p>
+            <p className="px-3 py-4 text-sm text-zinc-500">
+              No students found.
+            </p>
           ) : (
             displayRows.map((row) => (
               <div
@@ -366,7 +422,9 @@ export default function AttendanceList() {
           </button>
           <button
             type="button"
-            onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+            onClick={() =>
+              setCurrentPage((page) => Math.min(totalPages, page + 1))
+            }
             disabled={currentPage >= totalPages || isFetching}
             className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-70"
           >

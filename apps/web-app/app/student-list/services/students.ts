@@ -62,3 +62,31 @@ export async function createStudent(payload: {
     .select("id, student_id, first_name, last_name, section_id, created_at")
     .single();
 }
+
+export async function updateStudent(payload: {
+  id: string;
+  student_id: string;
+  first_name: string;
+  last_name: string;
+  section_id: string;
+}) {
+  const supabase = createClient();
+
+  return supabase
+    .from("students")
+    .update({
+      student_id: payload.student_id,
+      first_name: payload.first_name,
+      last_name: payload.last_name,
+      section_id: payload.section_id,
+    })
+    .eq("id", payload.id)
+    .select("id, student_id, first_name, last_name, section_id, created_at")
+    .single();
+}
+
+export async function deleteStudent(id: string) {
+  const supabase = createClient();
+
+  return supabase.from("students").delete().eq("id", id);
+}
