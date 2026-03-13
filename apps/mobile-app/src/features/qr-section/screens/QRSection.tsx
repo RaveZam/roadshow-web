@@ -8,8 +8,8 @@ import { Spacing } from "@/constants/theme";
 import Scanner from "../components/Scanner";
 
 const FRAME_GREEN = "#000000";
-const CORNER_SIZE = 36;
-const CORNER_THICKNESS = 10;
+const CORNER_SIZE = 28;
+const CORNER_THICKNESS = 4;
 
 function ScannerFrame() {
   return (
@@ -30,15 +30,28 @@ export default function QRSection() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.scannerWrapper}>
-          <ThemedView style={styles.scannerContainer}>
-            <Scanner />
-          </ThemedView>
-          <ScannerFrame />
-        </View>
         <ThemedText type="title" style={styles.headerText}>
-          Scan QR Code
+          SCAN QR CODE
         </ThemedText>
+
+        <View style={styles.panel}>
+          <ThemedText type="default" style={styles.tooltipText}>
+            Hold your device over a QR code to scan it
+          </ThemedText>
+
+          <View style={styles.scannerWrapper}>
+            <ThemedView style={styles.scannerContainer}>
+              <Scanner />
+            </ThemedView>
+            <ScannerFrame />
+          </View>
+
+          <View style={styles.dotsRow}>
+            <View style={styles.dot} />
+            <View style={styles.dot} />
+            <View style={styles.dot} />
+          </View>
+        </View>
       </SafeAreaView>
     </ThemedView>
   );
@@ -50,51 +63,57 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
-    padding: Spacing.three,
-    gap: Spacing.three,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.four,
+    gap: Spacing.four,
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "flex-start",
   },
   headerText: {
-    fontSize: 28,
-    lineHeight: 34,
+    marginTop: Spacing.four,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    fontSize: 30,
+    lineHeight: 36,
   },
-  placeholder: {
-    flex: 1,
-    borderRadius: 12,
+  panel: {
+    width: "88%",
+    maxWidth: 360,
+    borderRadius: 28,
     alignItems: "center",
     justifyContent: "center",
     gap: Spacing.three,
-    borderWidth: 1,
-    borderColor: "#e4e4e7",
+    paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.four,
+    backgroundColor: "#f4f4f5",
+    shadowColor: "#000000",
+    shadowOpacity: 0.09,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
   },
-  actionButton: {
-    minHeight: 44,
-    borderRadius: 8,
-    paddingHorizontal: Spacing.three,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#059669",
-  },
-  actionButtonText: {
-    color: "#ffffff",
-  },
-  pressed: {
-    opacity: 0.75,
+  tooltipText: {
+    textAlign: "center",
+    color: "#52525b",
+    fontSize: 18,
+    lineHeight: 24,
   },
   scannerWrapper: {
     aspectRatio: 1,
-    height: "30%",
-    width: "30%",
+    width: "100%",
+    maxWidth: 220,
     position: "relative",
+    borderRadius: 16,
+    overflow: "hidden",
   },
   scannerContainer: {
     ...StyleSheet.absoluteFillObject,
-    borderRadius: 12,
+    borderRadius: 16,
     overflow: "hidden",
   },
   frameOverlay: {
     ...StyleSheet.absoluteFillObject,
+    padding: 10,
   },
   cornerEdge: {
     position: "absolute",
@@ -110,12 +129,24 @@ const styles = StyleSheet.create({
     backgroundColor: FRAME_GREEN,
     borderRadius: 0,
   },
-  edgeTopLeft: { left: 0, top: 0 },
-  edgeTopRight: { right: 0, top: 0 },
-  edgeBottomLeft: { left: 0, bottom: 0 },
-  edgeBottomRight: { right: 0, bottom: 0 },
-  barTopLeft: { left: 0, top: 0 },
-  barTopRight: { right: 0, top: 0 },
-  barBottomLeft: { left: 0, bottom: 0 },
-  barBottomRight: { right: 0, bottom: 0 },
+  edgeTopLeft: { left: 10, top: 10 },
+  edgeTopRight: { right: 10, top: 10 },
+  edgeBottomLeft: { left: 10, bottom: 10 },
+  edgeBottomRight: { right: 10, bottom: 10 },
+  barTopLeft: { left: 10, top: 10 },
+  barTopRight: { right: 10, top: 10 },
+  barBottomLeft: { left: 10, bottom: 10 },
+  barBottomRight: { right: 10, bottom: 10 },
+  dotsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#d4d4d8",
+  },
 });
