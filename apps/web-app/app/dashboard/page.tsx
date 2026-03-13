@@ -1,16 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import DashboardSidebar from "./components/DashboardSidebar";
 import StatCardsRow from "./components/StatCardsRow";
-import AlertsCard from "./components/AlertsCard";
 import StudentsList from "../student-list/StudentsList";
 import SectionListPage from "../section-list/page";
 import AttendanceList from "../attendance/AttendanceList";
-import {
-  type DashboardMetrics,
-  fetchDashboardMetrics,
-} from "./services/dashboardMetrics";
+import Header from "../components/header";
+import { useDashboardMetrics } from "./hooks/useDashboardMetrics";
 
 export type DayFilter = "all" | "day1" | "day2" | "day3";
 
@@ -24,76 +21,36 @@ const DAY_FILTER_LABELS: Record<DayFilter, string> = {
 export default function DashboardPage() {
   const [active, setActive] = useState<string>("Dashboard");
   const [dayFilter, setDayFilter] = useState<DayFilter>("all");
-  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
-  const [isLoadingMetrics, setIsLoadingMetrics] = useState(true);
-  const [metricsError, setMetricsError] = useState("");
-
-  useEffect(() => {
-    const loadMetrics = async () => {
-      setIsLoadingMetrics(true);
-      setMetricsError("");
-
-      const result = await fetchDashboardMetrics();
-      setIsLoadingMetrics(false);
-
-      if (result.error) {
-        setMetricsError(result.error.message);
-        return;
-      }
-
-      setMetrics(result.data);
-    };
-
-    if (active === "Dashboard") {
-      loadMetrics();
-    }
-  }, [active]);
+  const { metrics, isLoadingMetrics, metricsError } = useDashboardMetrics(
+    active === "Dashboard",
+  );
 
   return (
     <div className="h-screen bg-[#f5f6f8] font-sans text-zinc-900">
       <div className="flex h-full">
         <DashboardSidebar active={active} onSelect={setActive} />
-
         <main className="flex-1 p-6 xl:p-8 flex flex-col overflow-hidden">
-          <header className="mb-5 flex-none">
-            <h1 className="text-[42px] leading-none font-semibold tracking-tight text-zinc-900">
-              {active === "Dashboard"
-                ? "Dashboard"
-                : active === "Students List"
-                  ? "Students List"
-                  : active === "Sections"
-                    ? "Section List"
-                    : "Attendance"}
-            </h1>
-            <p className="mt-1 text-sm text-zinc-500">
-              {active === "Dashboard"
-                ? "University attendance overview (3-day event)."
-                : active === "Students List"
-                  ? "Manage students and attendance."
-                  : active === "Sections"
-                    ? "Create and manage sections."
-                    : "Review attendance records by section."}
-            </p>
-          </header>
-
+          <Header active={active} />
           <div className="flex-1 overflow-auto hide-scrollbar">
             {active === "Dashboard" ? (
               <>
                 <div className="mb-4 flex flex-wrap gap-2">
-                  {(Object.keys(DAY_FILTER_LABELS) as DayFilter[]).map((key) => (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => setDayFilter(key)}
-                      className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-                        dayFilter === key
-                          ? "bg-emerald-600 text-white"
-                          : "border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
-                      }`}
-                    >
-                      {DAY_FILTER_LABELS[key]}
-                    </button>
-                  ))}
+                  {(Object.keys(DAY_FILTER_LABELS) as DayFilter[]).map(
+                    (key) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setDayFilter(key)}
+                        className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+                          dayFilter === key
+                            ? "bg-emerald-600 text-white"
+                            : "border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
+                        }`}
+                      >
+                        {DAY_FILTER_LABELS[key]}
+                      </button>
+                    ),
+                  )}
                 </div>
 
                 {metricsError ? (
@@ -105,7 +62,9 @@ export default function DashboardPage() {
                 {isLoadingMetrics ? (
                   <div className="flex min-h-[240px] flex-col items-center justify-center rounded-xl border border-zinc-200 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
                     <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-200 border-t-emerald-600" />
-                    <p className="mt-2 text-sm text-zinc-500">Loading attendance metrics...</p>
+                    <p className="mt-2 text-sm text-zinc-500">
+                      Loading attendance metrics...
+                    </p>
                   </div>
                 ) : metrics ? (
                   <>
@@ -117,7 +76,9 @@ export default function DashboardPage() {
                           <h2 className="text-lg font-semibold text-zinc-800">
                             Daily Attendance Trend
                           </h2>
-                          <p className="text-xs text-zinc-500">{metrics.eventWindowLabel}</p>
+                          <p className="text-xs text-zinc-500">
+                            {metrics.eventWindowLabel}
+                          </p>
                         </div>
 
                         <div className="divide-y divide-zinc-100 rounded-lg border border-zinc-200">
@@ -128,7 +89,9 @@ export default function DashboardPage() {
                             >
                               <p className="font-medium">{row.day}</p>
                               <p>{row.checkedIn.toLocaleString()} checked in</p>
-                              <p className="text-xs text-zinc-500">{row.rate}</p>
+                              <p className="text-xs text-zinc-500">
+                                {row.rate}
+                              </p>
                             </div>
                           ))}
                         </div>
@@ -146,24 +109,12 @@ export default function DashboardPage() {
                             >
                               <p className="font-medium">{section.section}</p>
                               <p>{section.checkedIn}</p>
-                              <p className="text-xs text-zinc-500">{section.rate}</p>
+                              <p className="text-xs text-zinc-500">
+                                {section.rate}
+                              </p>
                             </div>
                           ))}
                         </div>
-                      </div>
-                    </section>
-
-                    <section className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[1.7fr_1.3fr]">
-                      <AlertsCard title="Attendance Alerts" rows={metrics.alerts} />
-                      <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
-                        <h2 className="text-lg font-semibold text-zinc-800">
-                          Recommended Actions
-                        </h2>
-                        <ul className="mt-4 space-y-2 text-sm text-zinc-600">
-                          <li>Coordinate with class leaders of low-turnout sections.</li>
-                          <li>Prioritize follow-up with at-risk students by section.</li>
-                          <li>Review Day 3 bottlenecks before the next university event.</li>
-                        </ul>
                       </div>
                     </section>
                   </>

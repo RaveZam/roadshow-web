@@ -1,4 +1,4 @@
-import { type DashboardStatCard } from "../services/dashboardMetrics";
+import { type DashboardStatCard } from "../types/master-types";
 
 type StatCardsRowProps = {
   cards: DashboardStatCard[];
@@ -16,11 +16,17 @@ export default function StatCardsRow({ cards }: StatCardsRowProps) {
               : "border-zinc-200 bg-white text-zinc-900"
           }`}
         >
-          <p className={`text-sm ${card.highlighted ? "text-emerald-100" : "text-zinc-500"}`}>
+          <p
+            className={`text-sm ${card.highlighted ? "text-emerald-100" : "text-zinc-500"}`}
+          >
             {card.label}
           </p>
-          <p className="mt-1 text-[36px] leading-none font-semibold tracking-tight">{card.value}</p>
-          <p className={`mt-2 text-xs ${card.highlighted ? "text-emerald-100" : "text-zinc-400"}`}>
+          <p className="mt-1 text-[36px] leading-none font-semibold tracking-tight">
+            {card.value}
+          </p>
+          <p
+            className={`mt-2 text-xs ${card.highlighted ? "text-emerald-100" : "text-zinc-400"}`}
+          >
             {card.note}
           </p>
         </article>
