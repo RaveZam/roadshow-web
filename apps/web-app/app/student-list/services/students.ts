@@ -30,7 +30,7 @@ export async function fetchStudents(page = 1, sectionId = "all") {
   return query.range(from, to);
 }
 
-export async function fetchStudentsForExport(sectionId = "all") {
+export async function fetchStudentsForMetrics(sectionId = "all") {
   const supabase = createClient();
   let query = supabase
     .from("students")
@@ -42,6 +42,10 @@ export async function fetchStudentsForExport(sectionId = "all") {
   }
 
   return query;
+}
+
+export async function fetchStudentsForExport(sectionId = "all") {
+  return fetchStudentsForMetrics(sectionId);
 }
 
 export async function createStudent(payload: {

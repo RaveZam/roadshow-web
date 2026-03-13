@@ -1,5 +1,5 @@
-import { fetchSections } from "@/app/section-list/services/sections";
-import { fetchStudents } from "@/app/student-list/services/students";
+import { fetchSectionsForMetrics } from "@/app/section-list/services/sections";
+import { fetchStudentsForMetrics } from "@/app/student-list/services/students";
 import { fetchAttendance } from "@/app/attendance/services/attendance";
 import { buildDashboardMetrics } from "@/app/dashboard/helpers/dashboardMetrics";
 import type { DashboardMetrics, DayFilter } from "../types/master-types";
@@ -9,8 +9,8 @@ export async function fetchDashboardMetrics(dayFilter: DayFilter): Promise<{
   error: Error | null;
 }> {
   const [studentsResult, sectionsResult, attendanceResult] = await Promise.all([
-    fetchStudents(),
-    fetchSections(),
+    fetchStudentsForMetrics(),
+    fetchSectionsForMetrics(),
     fetchAttendance(),
   ]);
 

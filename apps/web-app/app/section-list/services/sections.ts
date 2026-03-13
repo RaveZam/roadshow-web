@@ -15,6 +15,10 @@ export async function fetchSections() {
     .order("created_at", { ascending: false });
 }
 
+export async function fetchSectionsForMetrics() {
+  return fetchSections();
+}
+
 export async function createSection(name: string) {
   const supabase = createClient();
 
