@@ -23,6 +23,23 @@ export default function SettingsPage() {
           </ThemedText>
 
           <ThemedView type="backgroundElement" style={styles.card}>
+            <ThemedText type="subtitle">Event Dates</ThemedText>
+            <ThemedText style={styles.helperText}>
+              Attendance is recorded only on these days.
+            </ThemedText>
+            {[
+              { label: "Day 1", date: "April 21, 2026" },
+              { label: "Day 2", date: "April 22, 2026" },
+              { label: "Day 3", date: "April 23, 2026" },
+            ].map((day) => (
+              <ThemedView key={day.label} style={styles.dateRow}>
+                <ThemedText type="smallBold">{day.label}</ThemedText>
+                <ThemedText style={styles.dateText}>{day.date}</ThemedText>
+              </ThemedView>
+            ))}
+          </ThemedView>
+
+          <ThemedView type="backgroundElement" style={styles.card}>
             <ThemedText type="subtitle">Trigger Sync</ThemedText>
             <ThemedText style={styles.helperText}>
               Push offline attendance records to the server. (Just in case auto
@@ -116,4 +133,14 @@ const styles = StyleSheet.create({
     opacity: 0.55,
   },
   pressed: { opacity: 0.75 },
+  dateRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 4,
+  },
+  dateText: {
+    opacity: 0.7,
+    fontSize: 13,
+  },
 });

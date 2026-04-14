@@ -10,9 +10,9 @@ import {
 } from "../../../../lib/sqlite/dao/outbox-dao";
 
 const days = [
-  { label: "day1", date: "2026-03-11" },
-  { label: "day2", date: "2026-03-12" },
-  { label: "day3", date: "2026-03-13" },
+  { label: "day1", date: "2026-04-21" },
+  { label: "day2", date: "2026-04-22" },
+  { label: "day3", date: "2026-04-23" },
 ];
 
 function getTodayDayLabel(): string | null {
