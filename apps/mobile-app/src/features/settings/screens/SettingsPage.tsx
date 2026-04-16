@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback, useState } from "react";
 import { Pressable, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -10,9 +10,16 @@ import { getOutbox } from "../../../../lib/sqlite/dao/outbox-dao";
 import { useSync } from "../../../../lib/services/useSync";
 
 export default function SettingsPage() {
-  const pendingSyncCount = getOutbox().length;
+  const [pendingSyncCount, setPendingSyncCount] = useState(
+    () => getOutbox().length,
+  );
   const { sync, syncedSnackbarVisible, syncedCount, hideSyncedSnackbar } =
     useSync();
+
+  const handleSync = useCallback(async () => {
+    await sync();
+    setPendingSyncCount(getOutbox().length);
+  }, [sync]);
 
   return (
     <ThemedView style={styles.container}>
@@ -28,13 +35,26 @@ export default function SettingsPage() {
               Attendance is recorded only on these days.
             </ThemedText>
             {[
-              { label: "Day 1", date: "April 21, 2026" },
-              { label: "Day 2", date: "April 22, 2026" },
-              { label: "Day 3", date: "April 23, 2026" },
-            ].map((day) => (
-              <ThemedView key={day.label} style={styles.dateRow}>
-                <ThemedText type="smallBold">{day.label}</ThemedText>
-                <ThemedText style={styles.dateText}>{day.date}</ThemedText>
+              { label: "Day 1", day: "21", month: "APR", year: "2026" },
+              { label: "Day 2", day: "22", month: "APR", year: "2026" },
+              { label: "Day 3", day: "23", month: "APR", year: "2026" },
+            ].map((item, index) => (
+              <ThemedView key={item.label} style={styles.dateRow}>
+                <ThemedView style={styles.dateBadge}>
+                  <ThemedText style={styles.dateBadgeNumber}>
+                    {index + 1}
+                  </ThemedText>
+                </ThemedView>
+                <ThemedView style={styles.dateLabelGroup}>
+                  <ThemedText type="smallBold">{item.label}</ThemedText>
+                </ThemedView>
+                <ThemedView style={styles.dateChip}>
+                  <ThemedText style={styles.dateChipDay}>{item.day}</ThemedText>
+                  <ThemedView style={styles.dateChipDivider} />
+                  <ThemedText style={styles.dateChipMonth}>
+                    {item.month} {item.year}
+                  </ThemedText>
+                </ThemedView>
               </ThemedView>
             ))}
           </ThemedView>
@@ -46,7 +66,7 @@ export default function SettingsPage() {
               sync doesnt trigger)
             </ThemedText>
             <Pressable
-              onPress={sync}
+              onPress={handleSync}
               style={({ pressed }) => [
                 styles.actionButton,
                 pressed && styles.pressed,
@@ -135,12 +155,48 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.75 },
   dateRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 4,
+    gap: 10,
+    paddingVertical: 5,
   },
-  dateText: {
-    opacity: 0.7,
+  dateBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: "#208AEF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dateBadgeNumber: {
+    color: "#ffffff",
     fontSize: 13,
+    fontWeight: "700",
+  },
+  dateLabelGroup: {
+    flex: 1,
+  },
+  dateChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f1f5f9",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    gap: 6,
+  },
+  dateChipDay: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#0f172a",
+  },
+  dateChipDivider: {
+    width: 1,
+    height: 12,
+    backgroundColor: "#cbd5e1",
+  },
+  dateChipMonth: {
+    fontSize: 12,
+    color: "#64748b",
+    fontWeight: "500",
   },
 });

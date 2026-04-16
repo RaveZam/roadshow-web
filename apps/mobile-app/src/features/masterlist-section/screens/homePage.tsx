@@ -55,17 +55,17 @@ export default function HomePage() {
 
       setStudents(
         studentsRows.map((s: any) => ({
-          id: s.id,
+          id: String(s.id),
           studentId: s.student_id,
           fname: s.first_name,
           lname: s.last_name,
-          section: s.section_id,
+          section: String(s.section_id),
         })),
       );
 
       setSections(
         sectionsRows.map((s: any) => ({
-          id: s.id,
+          id: String(s.id),
           name: s.name,
         })),
       );
@@ -156,21 +156,23 @@ export default function HomePage() {
 
               {showFilter && (
                 <ThemedView type="backgroundSelected" style={styles.dropdown}>
-                  {sectionOptions.map((section) => (
-                    <Pressable
-                      key={section.id ?? "all"}
-                      onPress={() => {
-                        setSelectedSection(section.id);
-                        setShowFilter(false);
-                      }}
-                      style={({ pressed }) => [
-                        styles.dropdownItem,
-                        pressed && styles.pressed,
-                      ]}
-                    >
-                      <ThemedText type="small">{section.name}</ThemedText>
-                    </Pressable>
-                  ))}
+                  <ScrollView bounces={false} nestedScrollEnabled>
+                    {sectionOptions.map((section) => (
+                      <Pressable
+                        key={section.id ?? "all"}
+                        onPress={() => {
+                          setSelectedSection(section.id);
+                          setShowFilter(false);
+                        }}
+                        style={({ pressed }) => [
+                          styles.dropdownItem,
+                          pressed && styles.pressed,
+                        ]}
+                      >
+                        <ThemedText type="small">{section.name}</ThemedText>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
                 </ThemedView>
               )}
             </View>
@@ -332,6 +334,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "#e4e4e7",
+    maxHeight: 200,
   },
   dropdownItem: {
     paddingHorizontal: Spacing.two,
