@@ -103,16 +103,18 @@ export function buildDashboardMetrics(
       return {
         section: section.name,
         checkedIn: sectionCheckIns,
+        maxCheckIns: sectionMaxCheckIns,
         rate: `${sectionRate.toFixed(1)}%`,
       };
     })
-    .sort((a, b) => b.checkedIn - a.checkedIn)
+    .sort((a, b) => Number.parseFloat(b.rate) - Number.parseFloat(a.rate))
     .slice(0, 5);
 
   const trendRows: TrendRow[] = [
     {
       day: "Day 1",
       checkedIn: day1CheckedIn,
+      totalStudents,
       rate:
         totalStudents === 0
           ? "0.0%"
@@ -121,6 +123,7 @@ export function buildDashboardMetrics(
     {
       day: "Day 2",
       checkedIn: day2CheckedIn,
+      totalStudents,
       rate:
         totalStudents === 0
           ? "0.0%"
@@ -129,6 +132,7 @@ export function buildDashboardMetrics(
     {
       day: "Day 3",
       checkedIn: day3CheckedIn,
+      totalStudents,
       rate:
         totalStudents === 0
           ? "0.0%"

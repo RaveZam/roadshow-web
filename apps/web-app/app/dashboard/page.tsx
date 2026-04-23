@@ -92,13 +92,18 @@ export default function DashboardPage() {
                         </h2>
 
                         <div className="mt-4 divide-y divide-zinc-100 rounded-lg border border-zinc-200">
+                          <div className="flex items-center justify-between px-3 py-2 text-xs font-medium text-zinc-400">
+                            <p>Section</p>
+                            <p>Attended</p>
+                            <p>Rate</p>
+                          </div>
                           {metrics.topSections.map((section) => (
                             <div
                               key={section.section}
                               className="flex items-center justify-between px-3 py-3 text-sm text-zinc-700"
                             >
                               <p className="font-medium">{section.section}</p>
-                              <p>{section.checkedIn}</p>
+                              <p>{section.checkedIn}/{section.maxCheckIns}</p>
                               <p className="text-xs text-zinc-500">
                                 {section.rate}
                               </p>

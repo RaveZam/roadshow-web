@@ -10,12 +10,14 @@ export type DayFilter = "all" | "day1" | "day2" | "day3";
 export type TrendRow = {
   day: string;
   checkedIn: number;
+  totalStudents: number;
   rate: string;
 };
 
 export type TopSectionRow = {
   section: string;
   checkedIn: number;
+  maxCheckIns: number;
   rate: string;
 };
 

@@ -17,18 +17,11 @@ type GroupedBarChartProps = {
 };
 
 export default function GroupedBarChart({ rows }: GroupedBarChartProps) {
-  const data = rows.map((row) => {
-    const rateValue = Number.parseFloat(row.rate.replace("%", ""));
-    const rate = Number.isFinite(rateValue) ? rateValue : 0;
-    const estimatedTotal =
-      rate > 0 ? Math.round(row.checkedIn / (rate / 100)) : 0;
-
-    return {
-      day: row.day,
-      checkedIn: row.checkedIn,
-      notCheckedIn: Math.max(estimatedTotal - row.checkedIn, 0),
-    };
-  });
+  const data = rows.map((row) => ({
+    day: row.day,
+    checkedIn: row.checkedIn,
+    notCheckedIn: Math.max(row.totalStudents - row.checkedIn, 0),
+  }));
 
   return (
     <div className="h-72 w-full">
