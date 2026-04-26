@@ -1,0 +1,9 @@
+CREATE TABLE attendance_logs (
+  id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  student_id    UUID        NOT NULL REFERENCES students(id),
+  day_number    SMALLINT    NOT NULL CHECK (day_number BETWEEN 1 AND 3),
+  period        TEXT        NOT NULL CHECK (period IN ('morning', 'afternoon')),
+  time_in       TIMESTAMPTZ,
+  time_out      TIMESTAMPTZ,
+  UNIQUE (student_id, day_number, period)
+);

@@ -1,16 +1,9 @@
 import { db } from "../sqlite/db";
 import { supabase } from "../supabase";
-import { getOutbox } from "../sqlite/dao/outbox-dao";
-
-type OutboxRow = {
-  id: number;
-  student_id: string;
-  day: string;
-  synced: number;
-};
+import { getOutbox, type OutboxRow } from "../sqlite/dao/outbox-dao";
 
 export async function syncOutbox() {
-  const pending = getOutbox() as OutboxRow[];
+  const pending = getOutbox();
 
   if (pending.length === 0) return { synced: 0, failed: 0 };
 
@@ -19,10 +12,16 @@ export async function syncOutbox() {
 
   for (const entry of pending) {
     try {
-      const { error } = await supabase.rpc("mark_attendance", {
-        p_student_id: entry.student_id,
-        p_day: entry.day,
-      });
+      const { error } = await supabase.from("attendance_logs").upsert(
+        {
+          student_id: entry.student_id,
+          period: entry.period,
+          date: entry.date,
+          time_in: entry.time_in,
+          time_out: entry.time_out,
+        },
+        { onConflict: "student_id,date,period" },
+      );
 
       if (error) throw error;
 
@@ -32,9 +31,10 @@ export async function syncOutbox() {
 
       synced++;
     } catch (err) {
-      console.warn(
+      console.error(
         `Failed to sync outbox entry ${entry.id}:`,
-        err instanceof Error ? err.message : String(err),
+        JSON.stringify(err),
+        JSON.stringify(entry),
       );
       failed++;
     }

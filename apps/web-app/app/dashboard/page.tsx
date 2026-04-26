@@ -10,6 +10,7 @@ import Header from "../components/header";
 import { useDashboardMetrics } from "./hooks/useDashboardMetrics";
 import type { DayFilter } from "./types/master-types";
 import GroupedBarChart from "./components/GroupedBarChart";
+import EventSettings from "../event-settings/EventSettings";
 
 const DAY_FILTER_LABELS: Record<DayFilter, string> = {
   all: "All-Time",
@@ -123,6 +124,8 @@ export default function DashboardPage() {
               <StudentsList />
             ) : active === "Sections" ? (
               <SectionListPage />
+            ) : active === "Event Settings" ? (
+              <EventSettings />
             ) : (
               <AttendanceList />
             )}

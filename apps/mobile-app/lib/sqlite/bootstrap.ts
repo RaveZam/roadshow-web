@@ -1,7 +1,7 @@
 import { db, initDb } from "./db";
 
 function logTableSnapshot(
-  table: "students" | "attendance" | "outbox" | "section",
+  table: "students" | "attendance_logs" | "outbox" | "section" | "event_settings",
 ) {
   try {
     const columns = db.getAllSync<{
@@ -39,7 +39,8 @@ function logTableSnapshot(
 export default function bootstrapDatabase() {
   initDb();
   // logTableSnapshot("students");
-  logTableSnapshot("attendance");
+  logTableSnapshot("attendance_logs");
   logTableSnapshot("outbox");
+  logTableSnapshot("event_settings");
   // logTableSnapshot("section");
 }

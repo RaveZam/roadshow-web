@@ -5,14 +5,67 @@ import {
   getStudentById,
   type StudentRecord,
 } from "../../../../lib/sqlite/dao/get-student-dao";
-import { hasStudentAttendedToday, scanStudent } from "../hooks/useScanner";
+import { scanStudent, type ScanResult } from "../hooks/useScanner";
+
+type ModalState = {
+  visible: boolean;
+  title: string;
+  subtitle: string;
+  color: string;
+};
+
+const MODAL_INITIAL: ModalState = {
+  visible: false,
+  title: "",
+  subtitle: "",
+  color: "#14532d",
+};
+
+function getModalContent(result: ScanResult): Omit<ModalState, "visible"> {
+  switch (result.status) {
+    case "time_in":
+      return {
+        title: "Time In Recorded",
+        subtitle: `Student has been timed in for the ${result.period} session.`,
+        color: "#14532d",
+      };
+    case "time_out":
+      return {
+        title: "Time Out Recorded",
+        subtitle: `Student has been timed out for the ${result.period} session.`,
+        color: "#1e3a5f",
+      };
+    case "already_timed_in":
+      return {
+        title: "Already Timed In",
+        subtitle: `Student has already timed in for the ${result.period} session.`,
+        color: "#92400e",
+      };
+    case "already_timed_out":
+      return {
+        title: "Already Timed Out",
+        subtitle: `Student has already timed out for the ${result.period} session.`,
+        color: "#92400e",
+      };
+    case "outside_window":
+      return {
+        title: "Outside Scan Window",
+        subtitle: "The current time is outside any configured time-in or time-out window.",
+        color: "#991b1b",
+      };
+    case "no_settings":
+      return {
+        title: "No Event Settings",
+        subtitle: "Event settings have not been configured yet. Please sync first.",
+        color: "#991b1b",
+      };
+  }
+}
 
 export default function Scanner() {
   const lastScanAtRef = useRef(0);
-  const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [showAlreadyAttendedModal, setShowAlreadyAttendedModal] =
-    useState(false);
+  const autoCloseRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [modal, setModal] = useState<ModalState>(MODAL_INITIAL);
   const [lastScannedStudent, setLastScannedStudent] =
     useState<StudentRecord | null>(null);
   const [permission, requestPermission] = useCameraPermissions();
@@ -25,9 +78,7 @@ export default function Scanner() {
 
   useEffect(() => {
     return () => {
-      if (successTimeoutRef.current) {
-        clearTimeout(successTimeoutRef.current);
-      }
+      if (autoCloseRef.current) clearTimeout(autoCloseRef.current);
     };
   }, []);
 
@@ -39,6 +90,8 @@ export default function Scanner() {
       </View>
     );
   }
+
+  const closeModal = () => setModal(MODAL_INITIAL);
 
   return (
     <View style={styles.container}>
@@ -56,23 +109,18 @@ export default function Scanner() {
           if (!studentId) return;
 
           try {
-            if (hasStudentAttendedToday(studentId)) {
-              const student = getStudentById(studentId);
-              setLastScannedStudent(student ?? null);
-              setShowAlreadyAttendedModal(true);
-              return;
-            }
-            scanStudent(studentId);
+            const scanResult = scanStudent(studentId);
             const student = getStudentById(studentId);
             setLastScannedStudent(student ?? null);
-            setShowSuccessModal(true);
 
-            if (successTimeoutRef.current) {
-              clearTimeout(successTimeoutRef.current);
+            const content = getModalContent(scanResult);
+            setModal({ visible: true, ...content });
+
+            // Auto-close success modals after 1.5s
+            if (autoCloseRef.current) clearTimeout(autoCloseRef.current);
+            if (scanResult.status === "time_in" || scanResult.status === "time_out") {
+              autoCloseRef.current = setTimeout(closeModal, 1500);
             }
-            successTimeoutRef.current = setTimeout(() => {
-              setShowSuccessModal(false);
-            }, 1200);
           } catch (error) {
             console.log("Failed to scan student", error);
           }
@@ -80,17 +128,17 @@ export default function Scanner() {
       />
 
       <Modal
-        visible={showSuccessModal}
+        visible={modal.visible}
         transparent
         animationType="fade"
-        onRequestClose={() => setShowSuccessModal(false)}
+        onRequestClose={closeModal}
       >
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Scan successful</Text>
-            <Text style={styles.subtitle}>
-              Student has been marked present today.
+            <Text style={[styles.modalTitle, { color: modal.color }]}>
+              {modal.title}
             </Text>
+            <Text style={styles.subtitle}>{modal.subtitle}</Text>
             {lastScannedStudent && (
               <Text style={styles.studentId}>
                 {lastScannedStudent.first_name} {lastScannedStudent.last_name} (
@@ -98,40 +146,10 @@ export default function Scanner() {
               </Text>
             )}
             <Pressable
-              onPress={() => setShowSuccessModal(false)}
+              onPress={closeModal}
               style={({ pressed }) => [
                 styles.modalButton,
-                pressed && styles.pressed,
-              ]}
-            >
-              <Text style={styles.buttonText}>OK</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
-
-      <Modal
-        visible={showAlreadyAttendedModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowAlreadyAttendedModal(false)}
-      >
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Student already attended</Text>
-            <Text style={styles.subtitle}>
-              This student has already been marked present today.
-            </Text>
-            {lastScannedStudent && (
-              <Text style={styles.studentId}>
-                {lastScannedStudent.first_name} {lastScannedStudent.last_name} (
-                {lastScannedStudent.student_id})
-              </Text>
-            )}
-            <Pressable
-              onPress={() => setShowAlreadyAttendedModal(false)}
-              style={({ pressed }) => [
-                styles.modalButton,
+                { backgroundColor: modal.color },
                 pressed && styles.pressed,
               ]}
             >
@@ -165,7 +183,6 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#14532d",
   },
   subtitle: {
     fontSize: 14,
@@ -181,7 +198,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#14532d",
     borderWidth: 1,
     borderColor: "#22c55e",
   },

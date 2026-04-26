@@ -5,98 +5,155 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Spacing } from "@/constants/theme";
-import { getAttendanceWithStudentNames } from "../../../../lib/sqlite/dao/attendance-dao";
+import { getAttendanceLogsWithStudentNames } from "../../../../lib/sqlite/dao/attendance-logs-dao";
 
-type AttendanceRowWithName = {
+type LogRow = {
   id: string;
   student_id: string;
-  day1: number;
-  day2: number;
-  day3: number;
-  scanned_at: string;
+  period: "morning" | "afternoon";
+  time_in: string | null;
+  time_out: string | null;
+  date: string;
   first_name: string | null;
   last_name: string | null;
 };
 
-function formatScannedAt(utcString: string): string {
-  if (!utcString) return "—";
+type DateGroup = {
+  date: string;
+  logs: LogRow[];
+};
 
-  const d = new Date(utcString.replace(" ", "T") + "Z");
-  if (Number.isNaN(d.getTime())) return "—";
-
-  const phDate = new Date(d.getTime() + 8 * 60 * 60 * 1000);
-
-  const dateStr = phDate.toLocaleDateString();
-  const hours24 = phDate.getUTCHours();
-  const minutes = phDate.getUTCMinutes();
-  const ampm = hours24 >= 12 ? "PM" : "AM";
-  const hours12 = hours24 % 12 || 12;
-  const minuteStr = minutes.toString().padStart(2, "0");
-  const timeStr = `${hours12}:${minuteStr} ${ampm}`;
-
-  return `${dateStr} ${timeStr}`;
+function formatTime(time: string | null): string {
+  if (!time) return "—";
+  const d = new Date(time);
+  if (isNaN(d.getTime())) return time;
+  return d.toLocaleTimeString("en-PH", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Manila",
+  });
 }
 
-function displayName(row: AttendanceRowWithName): string {
+function formatDate(dateStr: string): string {
+  const d = new Date(dateStr + "T00:00:00");
+  if (isNaN(d.getTime())) return dateStr;
+  return d.toLocaleDateString("en-PH", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function displayName(row: LogRow): string {
   if (row.first_name != null && row.last_name != null) {
     return `${row.first_name} ${row.last_name}`.trim();
   }
   return row.student_id;
 }
 
+function groupByDate(logs: LogRow[]): DateGroup[] {
+  const map = new Map<string, LogRow[]>();
+  for (const log of logs) {
+    const existing = map.get(log.date);
+    if (existing) {
+      existing.push(log);
+    } else {
+      map.set(log.date, [log]);
+    }
+  }
+  return Array.from(map.entries())
+    .sort(([a], [b]) => b.localeCompare(a))
+    .map(([date, logs]) => ({ date, logs }));
+}
+
 export default function HistoryPage() {
-  const [attendanceLogs, setAttendanceLogs] = useState<AttendanceRowWithName[]>(
-    [],
-  );
+  const [groups, setGroups] = useState<DateGroup[]>([]);
 
   useEffect(() => {
-    const rows = getAttendanceWithStudentNames() as AttendanceRowWithName[];
-    setAttendanceLogs(rows);
+    const rows = getAttendanceLogsWithStudentNames() as LogRow[];
+    setGroups(groupByDate(rows));
   }, []);
 
   return (
     <ThemedView style={styles.screen}>
       <SafeAreaView style={styles.safeArea}>
         <ThemedView type="backgroundElement" style={styles.card}>
-          <ThemedText type="subtitle">Attendance History</ThemedText>
+          <ThemedText type="subtitle">Time In / Time Out History</ThemedText>
 
           <FlatList
-            data={attendanceLogs}
-            keyExtractor={(item, index) => index.toString()}
+            data={groups}
+            keyExtractor={(item) => item.date}
             contentContainerStyle={styles.listContent}
-            renderItem={({ item }) => (
-              <ThemedView type="backgroundSelected" style={styles.listItem}>
-                <ThemedText type="small" themeColor="textSecondary">
-                  {formatScannedAt(item.scanned_at)}
+            renderItem={({ item: group }) => (
+              <View style={styles.dateGroup}>
+                <ThemedText type="smallBold" style={styles.dateHeader}>
+                  {formatDate(group.date)}
                 </ThemedText>
-                <ThemedText type="smallBold">
-                  Student: {displayName(item)}
-                </ThemedText>
-                <View style={styles.daysRow}>
-                  <ThemedText
-                    type="small"
-                    style={item.day1 ? styles.statusPresent : undefined}
+
+                {group.logs.map((log) => (
+                  <ThemedView
+                    key={log.id}
+                    type="backgroundSelected"
+                    style={styles.logItem}
                   >
-                    Day 1: {toStatus(item.day1)}
-                  </ThemedText>
-                  <ThemedText
-                    type="small"
-                    style={item.day2 ? styles.statusPresent : undefined}
-                  >
-                    Day 2: {toStatus(item.day2)}
-                  </ThemedText>
-                  <ThemedText
-                    type="small"
-                    style={item.day3 ? styles.statusPresent : undefined}
-                  >
-                    Day 3: {toStatus(item.day3)}
-                  </ThemedText>
-                </View>
-              </ThemedView>
+                    <View style={styles.logHeader}>
+                      <ThemedText type="smallBold">
+                        {displayName(log)}
+                      </ThemedText>
+                      <View style={styles.periodBadge}>
+                        <ThemedText type="small" style={styles.periodText}>
+                          {log.period === "morning" ? "AM" : "PM"}
+                        </ThemedText>
+                      </View>
+                    </View>
+
+                    <View style={styles.timesRow}>
+                      <View style={styles.timeBlock}>
+                        <ThemedText
+                          type="small"
+                          themeColor="textSecondary"
+                          style={styles.timeLabel}
+                        >
+                          Time In
+                        </ThemedText>
+                        <ThemedText
+                          type="small"
+                          style={
+                            log.time_in ? styles.timePresent : styles.timeAbsent
+                          }
+                        >
+                          {formatTime(log.time_in)}
+                        </ThemedText>
+                      </View>
+
+                      <View style={styles.timeBlock}>
+                        <ThemedText
+                          type="small"
+                          themeColor="textSecondary"
+                          style={styles.timeLabel}
+                        >
+                          Time Out
+                        </ThemedText>
+                        <ThemedText
+                          type="small"
+                          style={
+                            log.time_out
+                              ? styles.timePresent
+                              : styles.timeAbsent
+                          }
+                        >
+                          {formatTime(log.time_out)}
+                        </ThemedText>
+                      </View>
+                    </View>
+                  </ThemedView>
+                ))}
+              </View>
             )}
             ListEmptyComponent={
               <ThemedText type="small" themeColor="textSecondary">
-                No attendance logs yet.
+                No time in / time out logs yet.
               </ThemedText>
             }
           />
@@ -104,10 +161,6 @@ export default function HistoryPage() {
       </SafeAreaView>
     </ThemedView>
   );
-}
-
-function toStatus(value: number) {
-  return value ? "Present" : "Absent";
 }
 
 const styles = StyleSheet.create({
@@ -126,20 +179,48 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
   },
   listContent: {
-    gap: Spacing.two,
+    gap: Spacing.three,
     paddingBottom: Spacing.three,
   },
-  listItem: {
+  dateGroup: {
+    gap: Spacing.two,
+  },
+  dateHeader: {
+    color: "#71717a",
+  },
+  logItem: {
     borderRadius: 8,
     borderWidth: 1,
     borderColor: "#e4e4e7",
     padding: Spacing.two,
-    gap: Spacing.half,
+    gap: Spacing.two,
   },
-  daysRow: {
-    gap: Spacing.half,
+  logHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
-  statusPresent: {
-    color: "#4ade80",
+  periodBadge: {
+    backgroundColor: "#f0f0f4",
+    borderRadius: 4,
+    paddingHorizontal: Spacing.two,
+    paddingVertical: 2,
   },
+  periodText: {
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  timesRow: {
+    flexDirection: "row",
+    gap: Spacing.three,
+  },
+  timeBlock: {
+    flex: 1,
+    gap: 2,
+  },
+  timeLabel: {
+    fontSize: 11,
+  },
+  timePresent: { color: "#16a34a" },
+  timeAbsent: { opacity: 0.3 },
 });
