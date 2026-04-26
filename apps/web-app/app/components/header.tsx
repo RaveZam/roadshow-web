@@ -8,7 +8,9 @@ export default function Header({ active }: { active: string }) {
             ? "Students List"
             : active === "Sections"
               ? "Section List"
-              : "Attendance"}
+              : active === "Event Settings"
+                ? "Event Settings"
+                : "Attendance"}
       </h1>
       <p className="mt-1 text-sm text-zinc-500">
         {active === "Dashboard"
@@ -17,7 +19,9 @@ export default function Header({ active }: { active: string }) {
             ? "Manage students and attendance."
             : active === "Sections"
               ? "Create and manage sections."
-              : "Review attendance records by section."}
+              : active === "Event Settings"
+                ? "Configure event duration and schedules."
+                : "Review attendance records by section."}
       </p>
     </header>
   );

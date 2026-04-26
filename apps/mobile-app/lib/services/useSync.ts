@@ -1,5 +1,6 @@
 import { checkWifi } from "@/hooks/useWifiChecker";
 import { syncOutbox } from "./useOutboxSynx";
+import { syncEventSettingsFromApi } from "./get-event-settings";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export function useSync(intervalMs = 10000) {
@@ -13,6 +14,7 @@ export function useSync(intervalMs = 10000) {
     try {
       const hasWifi = await checkWifi();
       if (!hasWifi) return;
+      await syncEventSettingsFromApi();
       const { synced, failed } = await syncOutbox();
       console.log(`Synced ${synced} out of ${synced + failed} entries`);
       if (synced > 0) {

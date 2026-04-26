@@ -9,7 +9,7 @@ type Props = {
   onSelect: (item: string) => void;
 };
 
-const navItems = ["Dashboard", "Students List", "Sections", "Attendance"];
+const navItems = ["Dashboard", "Students List", "Sections", "Attendance", "Event Settings"];
 
 export default function DashboardSidebar({ active, onSelect }: Props) {
   const router = useRouter();

@@ -7,7 +7,7 @@ import {
   STUDENTS_PAGE_SIZE,
   type Student,
 } from "../student-list/services/students";
-import { fetchAttendance, type Attendance } from "./services/attendance";
+import { fetchAttendanceLogs, type AttendanceLog } from "./services/attendance";
 import {
   Listbox,
   ListboxButton,
@@ -15,20 +15,65 @@ import {
   ListboxOptions,
 } from "@headlessui/react";
 
-type AttendanceRow = {
+type AttendanceLogRow = {
   id: string;
   studentId: string;
   firstName: string;
   lastName: string;
-  sectionId: string;
   sectionName: string;
-  day1: boolean;
-  day2: boolean;
-  day3: boolean;
-  daysAttended: number;
+  period: string;
+  timeIn: string | null;
+  timeOut: string | null;
+  date: string;
 };
 
-const toStatus = (isPresent: boolean) => (isPresent ? "Present" : "Absent");
+const formatTime = (timestamp: string | null) => {
+  if (!timestamp) return "—";
+  const date = new Date(timestamp);
+  return date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+};
+
+const formatDate = (dateStr: string) => {
+  const date = new Date(dateStr + "T00:00:00");
+  return date.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+};
+
+const periodLabel = (period: string) => {
+  const lower = period.toLowerCase();
+  if (lower === "morning" || lower === "am") return "Morning";
+  if (lower === "afternoon" || lower === "pm") return "Afternoon";
+  return period;
+};
+
+type Remark = "Present" | "Late" | "No Time Out" | "—";
+
+const getRemarks = (timeIn: string | null, timeOut: string | null): Remark => {
+  if (timeIn && timeOut) return "Present";
+  if (!timeIn && timeOut) return "Late";
+  if (timeIn && !timeOut) return "No Time Out";
+  return "—";
+};
+
+const remarkStyle: Record<Remark, string> = {
+  Present: "bg-emerald-50 text-emerald-700",
+  Late: "bg-orange-50 text-orange-700",
+  "No Time Out": "bg-red-50 text-red-700",
+  "—": "",
+};
+
+const isMorning = (period: string) => {
+  const lower = period.toLowerCase();
+  return lower === "morning" || lower === "am";
+};
 
 const toCsvValue = (value: string | number) => {
   const text = String(value);
@@ -36,15 +81,20 @@ const toCsvValue = (value: string | number) => {
   return `"${escaped}"`;
 };
 
-const toCsvExcelText = (value: string) => {
-  const escaped = value.replace(/"/g, '""');
-  return `"=""${escaped}"""`;
+const formatTimeForCsv = (timestamp: string | null) => {
+  if (!timestamp) return "";
+  const date = new Date(timestamp);
+  return date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
 };
 
 export default function AttendanceList() {
   const [students, setStudents] = useState<Student[]>([]);
   const [sections, setSections] = useState<Section[]>([]);
-  const [attendance, setAttendance] = useState<Attendance[]>([]);
+  const [logs, setLogs] = useState<AttendanceLog[]>([]);
   const [isFetching, setIsFetching] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
@@ -67,7 +117,7 @@ export default function AttendanceList() {
     initializeSections();
   }, []);
 
-  const loadAttendance = async (sectionId: string) => {
+  const loadAttendanceLogs = async (sectionId: string) => {
     setIsFetching(true);
     setError("");
 
@@ -83,61 +133,58 @@ export default function AttendanceList() {
     setStudents(allStudents);
 
     if (allStudents.length === 0) {
-      setAttendance([]);
+      setLogs([]);
       setIsFetching(false);
       return;
     }
 
-    const attendanceResult = await fetchAttendance(
+    const logsResult = await fetchAttendanceLogs(
       allStudents.map((student) => student.id),
     );
 
     setIsFetching(false);
 
-    if (attendanceResult.error) {
-      setError(attendanceResult.error.message);
+    if (logsResult.error) {
+      setError(logsResult.error.message);
       return;
     }
 
-    setAttendance(attendanceResult.data ?? []);
+    setLogs(logsResult.data ?? []);
   };
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
-      void loadAttendance(selectedSectionId);
+      void loadAttendanceLogs(selectedSectionId);
     }, 0);
     return () => window.clearTimeout(timeoutId);
   }, [selectedSectionId]);
 
   const rows = useMemo(() => {
-    const attendanceByStudentId = new Map(
-      attendance.map((record) => [record.student_id, record]),
+    const studentById = new Map(
+      students.map((s) => [s.id, s]),
     );
     const sectionById = new Map(
       sections.map((section) => [section.id, section.name]),
     );
 
-    return students.map((student): AttendanceRow => {
-      const record = attendanceByStudentId.get(student.id);
-      const day1 = record ? Boolean(record.day1) : false;
-      const day2 = record ? Boolean(record.day2) : false;
-      const day3 = record ? Boolean(record.day3) : false;
-      const daysAttended = Number(day1) + Number(day2) + Number(day3);
+    return logs.map((log): AttendanceLogRow => {
+      const student = studentById.get(log.student_id);
 
       return {
-        id: record?.id ?? `student-${student.id}`,
-        studentId: student.student_id,
-        firstName: student.first_name,
-        lastName: student.last_name,
-        sectionId: student.section_id,
-        sectionName: sectionById.get(student.section_id) ?? "Unknown section",
-        day1,
-        day2,
-        day3,
-        daysAttended,
+        id: log.id,
+        studentId: student?.student_id ?? "",
+        firstName: student?.first_name ?? "",
+        lastName: student?.last_name ?? "",
+        sectionName: student
+          ? (sectionById.get(student.section_id) ?? "Unknown section")
+          : "Unknown",
+        period: log.period,
+        timeIn: log.time_in,
+        timeOut: log.time_out,
+        date: log.date,
       };
     });
-  }, [attendance, sections, students]);
+  }, [logs, sections, students]);
 
   const filteredRows = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -165,9 +212,7 @@ export default function AttendanceList() {
     setIsExporting(true);
     setError("");
 
-    const exportStudentsResult =
-      await fetchStudentsForExport(selectedSectionId);
-
+    const exportStudentsResult = await fetchStudentsForExport(selectedSectionId);
     if (exportStudentsResult.error) {
       setIsExporting(false);
       setError(exportStudentsResult.error.message);
@@ -175,92 +220,114 @@ export default function AttendanceList() {
     }
 
     const exportStudents = exportStudentsResult.data ?? [];
-
     if (exportStudents.length === 0) {
       setIsExporting(false);
       setError("No students to export.");
       return;
     }
 
-    const exportAttendanceResult = await fetchAttendance(
-      exportStudents.map((student) => student.id),
+    const exportLogsResult = await fetchAttendanceLogs(
+      exportStudents.map((s) => s.id),
     );
-
-    if (exportAttendanceResult.error) {
+    if (exportLogsResult.error) {
       setIsExporting(false);
-      setError(exportAttendanceResult.error.message);
+      setError(exportLogsResult.error.message);
       return;
     }
 
-    const attendanceByStudentId = new Map(
-      (exportAttendanceResult.data ?? []).map((record) => [
-        record.student_id,
-        record,
-      ]),
-    );
-    const sectionById = new Map(
-      sections.map((section) => [section.id, section.name]),
-    );
-    const exportRows = exportStudents.map((student) => {
-      const record = attendanceByStudentId.get(student.id);
-      const day1 = record ? Boolean(record.day1) : false;
-      const day2 = record ? Boolean(record.day2) : false;
-      const day3 = record ? Boolean(record.day3) : false;
-      const daysAttended = Number(day1) + Number(day2) + Number(day3);
+    const allLogs = exportLogsResult.data ?? [];
+    const studentById = new Map(exportStudents.map((s) => [s.id, s]));
+    const sectionById = new Map(sections.map((s) => [s.id, s.name]));
 
-      return {
-        studentName: `${student.first_name} ${student.last_name}`.trim(),
-        studentId: student.student_id,
-        sectionName: sectionById.get(student.section_id) ?? "Unknown section",
-        day1,
-        day2,
-        day3,
-        daysAttended,
-      };
-    });
+    // Group logs by student_id + date
+    const grouped = new Map<
+      string,
+      { morning: AttendanceLog | null; afternoon: AttendanceLog | null }
+    >();
+
+    for (const log of allLogs) {
+      const key = `${log.student_id}|${log.date}`;
+      if (!grouped.has(key)) {
+        grouped.set(key, { morning: null, afternoon: null });
+      }
+      const entry = grouped.get(key)!;
+      if (isMorning(log.period)) {
+        entry.morning = log;
+      } else {
+        entry.afternoon = log;
+      }
+    }
 
     const header = [
       "Student Name",
       "Student ID",
       "Section",
-      "Day 1",
-      "Day 2",
-      "Day 3",
-      "Days Attended",
+      "Day",
+      "Morning Time In",
+      "Morning Time Out",
+      "Morning Remarks",
+      "Afternoon Time In",
+      "Afternoon Time Out",
+      "Afternoon Remarks",
+      "Attendance",
     ];
 
-    const lines = [
-      header.map(toCsvValue).join(","),
-      ...exportRows.map((row) => {
-        const rowValues = [
-          row.studentName,
-          row.studentId,
-          row.sectionName,
-          toStatus(row.day1),
-          toStatus(row.day2),
-          toStatus(row.day3),
-        ];
+    const csvRows: string[] = [header.map(toCsvValue).join(",")];
 
-        return `${rowValues.map(toCsvValue).join(",")},${toCsvExcelText(`${row.daysAttended}/3`)}`;
-      }),
-    ];
+    for (const [key, { morning, afternoon }] of grouped) {
+      const [studentId, date] = key.split("|");
+      const student = studentById.get(studentId);
+      const studentName = student
+        ? `${student.first_name} ${student.last_name}`.trim()
+        : "";
+      const studentCode = student?.student_id ?? "";
+      const sectionName = student
+        ? (sectionById.get(student.section_id) ?? "Unknown")
+        : "Unknown";
 
-    const csv = `${lines.join("\n")}\n`;
+      const morningRemarks = morning
+        ? getRemarks(morning.time_in, morning.time_out)
+        : "—";
+      const afternoonRemarks = afternoon
+        ? getRemarks(afternoon.time_in, afternoon.time_out)
+        : "—";
+
+      const attended =
+        (morningRemarks !== "—" ? 1 : 0) +
+        (afternoonRemarks !== "—" ? 1 : 0);
+
+      const row = [
+        toCsvValue(studentName),
+        toCsvValue(studentCode),
+        toCsvValue(sectionName),
+        toCsvValue(formatDate(date)),
+        toCsvValue(formatTimeForCsv(morning?.time_in ?? null)),
+        toCsvValue(formatTimeForCsv(morning?.time_out ?? null)),
+        toCsvValue(morningRemarks),
+        toCsvValue(formatTimeForCsv(afternoon?.time_in ?? null)),
+        toCsvValue(formatTimeForCsv(afternoon?.time_out ?? null)),
+        toCsvValue(afternoonRemarks),
+        toCsvValue(`${attended}/2`),
+      ];
+
+      csvRows.push(row.join(","));
+    }
+
+    const csv = csvRows.join("\n") + "\n";
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
 
     const sectionLabel =
       selectedSectionId === "all"
         ? "all-sections"
-        : (sections.find((section) => section.id === selectedSectionId)?.name ??
-          "section");
+        : (sections.find((s) => s.id === selectedSectionId)?.name ?? "section");
 
     const safeSectionLabel = sectionLabel
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)/g, "");
 
-    const filename = `attendance-${safeSectionLabel}.csv`;
+    const filename = `attendance-logs-${safeSectionLabel}.csv`;
     const link = document.createElement("a");
     link.href = url;
     link.download = filename;
@@ -350,13 +417,14 @@ export default function AttendanceList() {
       {error ? <p className="mb-3 text-sm text-red-600">{error}</p> : null}
 
       <div className="overflow-hidden rounded-lg border border-zinc-200">
-        <div className="grid grid-cols-[2fr_1.5fr_1fr_1fr_1fr_1fr] border-b border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-500">
+        <div className="grid grid-cols-[2fr_1.2fr_0.8fr_1fr_1fr_1fr_1fr] border-b border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-500">
           <p>Student</p>
           <p>Section</p>
-          <p className="text-left">Day 1</p>
-          <p className="text-left">Day 2</p>
-          <p className="text-left">Day 3</p>
-          <p className="text-left">Days Attended</p>
+          <p>Day</p>
+          <p>Period</p>
+          <p>Time In</p>
+          <p>Time Out</p>
+          <p>Remarks</p>
         </div>
 
         <div className="divide-y divide-zinc-100">
@@ -364,18 +432,18 @@ export default function AttendanceList() {
             <div className="flex flex-col items-center justify-center py-6">
               <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-200 border-t-emerald-600" />
               <p className="mt-2 text-sm text-zinc-500">
-                Loading attendance...
+                Loading attendance logs...
               </p>
             </div>
           ) : displayRows.length === 0 ? (
             <p className="px-3 py-4 text-sm text-zinc-500">
-              No students found.
+              No attendance logs found.
             </p>
           ) : (
             displayRows.map((row) => (
               <div
                 key={row.id}
-                className="grid grid-cols-[2fr_1.5fr_1fr_1fr_1fr_1fr] items-center gap-4 px-3 py-2 text-sm text-zinc-700"
+                className="grid grid-cols-[2fr_1.2fr_0.8fr_1fr_1fr_1fr_1fr] items-center gap-4 px-3 py-2 text-sm text-zinc-700"
               >
                 <div>
                   <p>
@@ -384,23 +452,36 @@ export default function AttendanceList() {
                   <p className="text-xs text-zinc-500">{row.studentId}</p>
                 </div>
                 <p>{row.sectionName}</p>
-                <p
-                  className={`text-left ${row.day1 ? "text-emerald-700" : "text-zinc-500"}`}
-                >
-                  {toStatus(row.day1)}
+                <p>{formatDate(row.date)}</p>
+                <p>
+                  <span
+                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                      row.period.toLowerCase() === "morning" || row.period.toLowerCase() === "am"
+                        ? "bg-amber-50 text-amber-700"
+                        : "bg-indigo-50 text-indigo-700"
+                    }`}
+                  >
+                    {periodLabel(row.period)}
+                  </span>
                 </p>
-                <p
-                  className={`text-left ${row.day2 ? "text-emerald-700" : "text-zinc-500"}`}
-                >
-                  {toStatus(row.day2)}
+                <p className={row.timeIn ? "text-emerald-700" : "text-zinc-400"}>
+                  {formatTime(row.timeIn)}
                 </p>
-                <p
-                  className={`text-left ${row.day3 ? "text-emerald-700" : "text-zinc-500"}`}
-                >
-                  {toStatus(row.day3)}
+                <p className={row.timeOut ? "text-emerald-700" : "text-zinc-400"}>
+                  {formatTime(row.timeOut)}
                 </p>
-                <p className="text-left font-medium text-zinc-700">
-                  {row.daysAttended}/3
+                <p>
+                  {(() => {
+                    const remark = getRemarks(row.timeIn, row.timeOut);
+                    if (remark === "—") return <span className="text-zinc-400">—</span>;
+                    return (
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${remarkStyle[remark]}`}
+                      >
+                        {remark}
+                      </span>
+                    );
+                  })()}
                 </p>
               </div>
             ))

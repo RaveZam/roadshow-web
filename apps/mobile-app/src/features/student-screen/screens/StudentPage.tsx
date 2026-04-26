@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams } from "expo-router";
@@ -6,15 +6,37 @@ import { Spacing } from "@/constants/theme";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import LocalAttendanceNote from "../components/LocalAttendanceNote";
-import { getAttendanceByStudentId } from "../../../../lib/sqlite/dao/attendance-dao";
-import { useEffect } from "react";
-type AttendanceRow = {
-  id: number;
-  student_id: string;
-  day1: number;
-  day2: number;
-  day3: number;
-};
+import {
+  getAttendanceLogsByStudentId,
+  AttendanceLog,
+} from "../../../../lib/sqlite/dao/attendance-logs-dao";
+import { getEventSettings } from "../../../../lib/sqlite/dao/event-settings-dao";
+
+function getEventDays(startDate: string, endDate: string): string[] {
+  const days: string[] = [];
+  const current = new Date(startDate);
+  const end = new Date(endDate);
+  while (current <= end) {
+    days.push(current.toISOString().split("T")[0]);
+    current.setDate(current.getDate() + 1);
+  }
+  return days;
+}
+
+function formatTime(time: string | null): string {
+  if (!time) return "—";
+  const date = new Date(time);
+  if (!isNaN(date.getTime())) {
+    return date.toLocaleTimeString("en-PH", {
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Asia/Manila",
+    });
+  }
+  return time;
+}
+
+const PERIODS: Array<"morning" | "afternoon"> = ["morning", "afternoon"];
 
 export default function StudentPage() {
   const params = useLocalSearchParams<{
@@ -26,13 +48,29 @@ export default function StudentPage() {
   const studentId = params.studentId ?? "";
   const studentName = params.studentName ?? "Unknown Student";
   const supabaseId = params.supabaseId ?? "";
-  const [attendance, setAttendance] = useState<AttendanceRow[]>([]);
+
+  const [logs, setLogs] = useState<AttendanceLog[]>([]);
+  const [eventDays, setEventDays] = useState<string[]>([]);
 
   useEffect(() => {
-    const attendance = getAttendanceByStudentId(supabaseId) as AttendanceRow[];
-    setAttendance(attendance);
-    console.log(attendance);
+    const fetchedLogs = getAttendanceLogsByStudentId(supabaseId);
+    setLogs(fetchedLogs);
+
+    const settings = getEventSettings();
+    if (settings?.start_date && settings?.end_date) {
+      setEventDays(getEventDays(settings.start_date, settings.end_date));
+    } else {
+      const uniqueDates = [...new Set(fetchedLogs.map((l) => l.date))].sort();
+      setEventDays(uniqueDates);
+    }
   }, [supabaseId]);
+
+  function getLog(
+    date: string,
+    period: "morning" | "afternoon",
+  ): AttendanceLog | undefined {
+    return logs.find((l) => l.date === date && l.period === period);
+  }
 
   return (
     <ThemedView style={styles.screen}>
@@ -54,59 +92,60 @@ export default function StudentPage() {
               <ThemedText type="smallBold" style={styles.dayCol}>
                 Day
               </ThemedText>
-              <ThemedText type="smallBold" style={styles.statusCol}>
-                Attendance
+              <ThemedText type="smallBold" style={styles.periodCol}>
+                Period
+              </ThemedText>
+              <ThemedText type="smallBold" style={styles.timeCol}>
+                In
+              </ThemedText>
+              <ThemedText type="smallBold" style={styles.timeCol}>
+                Out
               </ThemedText>
             </View>
 
-            <View style={styles.tableRow}>
-              <ThemedText type="small" style={styles.dayCol}>
-                Day 1
-              </ThemedText>
-              <ThemedText
-                type="small"
-                style={[
-                  styles.statusCol,
-                  attendance[0]?.day1
-                    ? styles.statusPresent
-                    : styles.statusAbsent,
-                ]}
-              >
-                {attendance[0]?.day1 ? "Present" : "Absent"}
-              </ThemedText>
-            </View>
-            <View style={styles.tableRow}>
-              <ThemedText type="small" style={styles.dayCol}>
-                Day 2
-              </ThemedText>
-              <ThemedText
-                type="small"
-                style={[
-                  styles.statusCol,
-                  attendance[0]?.day2
-                    ? styles.statusPresent
-                    : styles.statusAbsent,
-                ]}
-              >
-                {attendance[0]?.day2 ? "Present" : "Absent"}
-              </ThemedText>
-            </View>
-            <View style={styles.tableRow}>
-              <ThemedText type="small" style={styles.dayCol}>
-                Day 3
-              </ThemedText>
-              <ThemedText
-                type="small"
-                style={[
-                  styles.statusCol,
-                  attendance[0]?.day3
-                    ? styles.statusPresent
-                    : styles.statusAbsent,
-                ]}
-              >
-                {attendance[0]?.day3 ? "Present" : "Absent"}
-              </ThemedText>
-            </View>
+            {eventDays.length === 0 ? (
+              <View style={styles.tableRow}>
+                <ThemedText type="small" style={styles.emptyText}>
+                  No attendance records
+                </ThemedText>
+              </View>
+            ) : (
+              eventDays.flatMap((date, dayIndex) =>
+                PERIODS.map((period) => {
+                  const log = getLog(date, period);
+                  return (
+                    <View key={`${date}-${period}`} style={styles.tableRow}>
+                      <ThemedText type="small" style={styles.dayCol}>
+                        {period === "morning" ? `Day ${dayIndex + 1}` : ""}
+                      </ThemedText>
+                      <ThemedText type="small" style={styles.periodCol}>
+                        {period === "morning" ? "Morning" : "Afternoon"}
+                      </ThemedText>
+                      <ThemedText
+                        type="small"
+                        style={[
+                          styles.timeCol,
+                          log?.time_in ? styles.timePresent : styles.timeAbsent,
+                        ]}
+                      >
+                        {formatTime(log?.time_in ?? null)}
+                      </ThemedText>
+                      <ThemedText
+                        type="small"
+                        style={[
+                          styles.timeCol,
+                          log?.time_out
+                            ? styles.timePresent
+                            : styles.timeAbsent,
+                        ]}
+                      >
+                        {formatTime(log?.time_out ?? null)}
+                      </ThemedText>
+                    </View>
+                  );
+                }),
+              )
+            )}
           </ThemedView>
         </ThemedView>
         <LocalAttendanceNote />
@@ -155,8 +194,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#f1f5f9",
   },
-  dayCol: { width: "50%" },
-  statusCol: { width: "50%" },
-  statusPresent: { color: "#16a34a" },
-  statusAbsent: { opacity: 0.2 },
+  dayCol: { width: "15%" },
+  periodCol: { width: "30%" },
+  timeCol: { width: "27.5%" },
+  timePresent: { color: "#16a34a" },
+  timeAbsent: { opacity: 0.3 },
+  emptyText: { flex: 1, textAlign: "center", opacity: 0.4 },
 });

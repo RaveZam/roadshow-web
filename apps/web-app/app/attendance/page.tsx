@@ -10,7 +10,7 @@ export default function AttendancePage() {
           Attendance
         </h1>
         <p className="mt-1 text-sm text-zinc-500">
-          Track day 1, day 2, and day 3 attendance by section.
+          View attendance logs with time in, time out, and period details.
         </p>
       </header>
 
