@@ -3,7 +3,10 @@
     "allow": [
       "Bash(find:*)",
       "Bash(ls:*)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(npx tsc:*)",
+      "Bash(git stash:*)",
+      "Bash(git add:*)"
     ]
   }
 }

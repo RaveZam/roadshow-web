@@ -107,7 +107,6 @@ export default function AttendanceList() {
   const [isExporting, setIsExporting] = useState(false);
   const [eventSettings, setEventSettings] = useState<EventSettingsType | null>(null);
   const [selectedDay, setSelectedDay] = useState("all");
-  const [timeInFilter, setTimeInFilter] = useState<"all" | "with" | "without">("all");
 
   // Build event day options from event settings date range
   const eventDays = useMemo(() => {
@@ -261,23 +260,8 @@ export default function AttendanceList() {
       );
     }
 
-    // Time-in filter (student-level across all days: partial counts as "with")
-    if (timeInFilter !== "all") {
-      const studentsWithTimeIn = new Set<string>();
-      for (const row of rows) {
-        if (row.timeIn !== null) {
-          studentsWithTimeIn.add(row.studentId);
-        }
-      }
-      if (timeInFilter === "with") {
-        filtered = filtered.filter((row) => studentsWithTimeIn.has(row.studentId));
-      } else {
-        filtered = filtered.filter((row) => !studentsWithTimeIn.has(row.studentId));
-      }
-    }
-
     return filtered;
-  }, [rows, search, selectedDay, timeInFilter]);
+  }, [rows, search, selectedDay]);
 
   const totalPages = Math.max(
     1,
@@ -545,61 +529,6 @@ export default function AttendanceList() {
             </div>
           </Listbox>
         )}
-        <Listbox
-          value={timeInFilter}
-          onChange={(value: "all" | "with" | "without") => {
-            setTimeInFilter(value);
-            setCurrentPage(1);
-          }}
-        >
-          <div className="relative">
-            <ListboxButton className="relative w-full min-w-[140px] cursor-default rounded-md border border-zinc-200 bg-white py-2 pl-3 pr-8 text-left text-sm text-zinc-700 focus:outline-none focus:ring-1 focus:ring-emerald-300">
-              <span className="block truncate">
-                {timeInFilter === "all"
-                  ? "All records"
-                  : timeInFilter === "with"
-                    ? "With Time In"
-                    : "Without Time In"}
-              </span>
-              <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-                <svg
-                  className="h-4 w-4 text-zinc-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 9l4-4 4 4m0 6l-4 4-4-4"
-                  />
-                </svg>
-              </span>
-            </ListboxButton>
-            <ListboxOptions className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border border-zinc-200 bg-white py-1 text-sm shadow-lg focus:outline-none">
-              <ListboxOption
-                value="all"
-                className="relative cursor-default select-none py-2 pl-3 pr-9 text-zinc-700 ui-selected:bg-emerald-50 ui-selected:text-emerald-900 ui-active:bg-zinc-100"
-              >
-                <span className="block truncate font-normal">All records</span>
-              </ListboxOption>
-              <ListboxOption
-                value="with"
-                className="relative cursor-default select-none py-2 pl-3 pr-9 text-zinc-700 ui-selected:bg-emerald-50 ui-selected:text-emerald-900 ui-active:bg-zinc-100"
-              >
-                <span className="block truncate font-normal">With Time In</span>
-              </ListboxOption>
-              <ListboxOption
-                value="without"
-                className="relative cursor-default select-none py-2 pl-3 pr-9 text-zinc-700 ui-selected:bg-emerald-50 ui-selected:text-emerald-900 ui-active:bg-zinc-100"
-              >
-                <span className="block truncate font-normal">Without Time In</span>
-              </ListboxOption>
-            </ListboxOptions>
-          </div>
-        </Listbox>
         <button
           type="button"
           onClick={handleExtractRecords}

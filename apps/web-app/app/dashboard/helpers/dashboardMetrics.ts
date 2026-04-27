@@ -262,7 +262,7 @@ export function buildDashboardMetrics(
     {
       label: "Late Arrivals",
       value: lateCount.toLocaleString(),
-      note: eventSettings ? "After cutoff time" : "No cutoff configured",
+      note: eventSettings ? "No Time in" : "No cutoff configured",
       color: (lateCount > 0 ? "amber" : "zinc") as "amber" | "zinc",
     },
   ];
@@ -407,7 +407,7 @@ export function buildDashboardMetrics(
   if (lateCount > 0) {
     alerts.push({
       title: `${lateCount} late arrivals`,
-      details: "Students who checked in after the cutoff time.",
+      details: "Students with no time in.",
       badge: "Info",
     });
   }
