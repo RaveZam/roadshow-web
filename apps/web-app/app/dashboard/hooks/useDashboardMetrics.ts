@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { fetchDashboardMetrics } from "@/app/dashboard/services/dashboardMetrics";
-import type { DashboardMetrics, DayFilter } from "../types/master-types";
+import type { DashboardMetrics } from "../types/master-types";
 
-export function useDashboardMetrics(enabled: boolean, dayFilter: DayFilter) {
+export function useDashboardMetrics(enabled: boolean, dayFilter: string) {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [isLoadingMetrics, setIsLoadingMetrics] = useState(true);
   const [metricsError, setMetricsError] = useState("");

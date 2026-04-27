@@ -9,6 +9,10 @@ import {
 } from "../student-list/services/students";
 import { fetchAttendanceLogs, type AttendanceLog } from "./services/attendance";
 import {
+  fetchEventSettings,
+  type EventSettings as EventSettingsType,
+} from "../event-settings/services/eventSettings";
+import {
   Listbox,
   ListboxButton,
   ListboxOption,
@@ -101,20 +105,43 @@ export default function AttendanceList() {
   const [selectedSectionId, setSelectedSectionId] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [isExporting, setIsExporting] = useState(false);
+  const [eventSettings, setEventSettings] = useState<EventSettingsType | null>(null);
+  const [selectedDay, setSelectedDay] = useState("all");
+  const [timeInFilter, setTimeInFilter] = useState<"all" | "with" | "without">("all");
+
+  // Build event day options from event settings date range
+  const eventDays = useMemo(() => {
+    if (!eventSettings?.start_date || !eventSettings?.end_date) return [];
+    const days: { label: string; date: string }[] = [];
+    const start = new Date(eventSettings.start_date + "T00:00:00");
+    const end = new Date(eventSettings.end_date + "T00:00:00");
+    let dayNum = 1;
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const iso = d.toISOString().slice(0, 10);
+      days.push({ label: `Day ${dayNum}`, date: iso });
+      dayNum++;
+    }
+    return days;
+  }, [eventSettings]);
 
   useEffect(() => {
-    const initializeSections = async () => {
+    const initialize = async () => {
       const sectionsResult = await fetchSections();
-
       if (sectionsResult.error) {
         setError(sectionsResult.error.message);
         return;
       }
-
       setSections(sectionsResult.data ?? []);
+
+      try {
+        const settings = await fetchEventSettings();
+        if (settings) setEventSettings(settings);
+      } catch {
+        // event settings not configured — filters just won't show days
+      }
     };
 
-    initializeSections();
+    initialize();
   }, []);
 
   const loadAttendanceLogs = async (sectionId: string) => {
@@ -160,40 +187,97 @@ export default function AttendanceList() {
   }, [selectedSectionId]);
 
   const rows = useMemo(() => {
-    const studentById = new Map(
-      students.map((s) => [s.id, s]),
-    );
     const sectionById = new Map(
       sections.map((section) => [section.id, section.name]),
     );
 
-    return logs.map((log): AttendanceLogRow => {
-      const student = studentById.get(log.student_id);
+    // Group logs by student uuid
+    const logsByStudent = new Map<string, AttendanceLog[]>();
+    for (const log of logs) {
+      const existing = logsByStudent.get(log.student_id);
+      if (existing) {
+        existing.push(log);
+      } else {
+        logsByStudent.set(log.student_id, [log]);
+      }
+    }
 
-      return {
-        id: log.id,
-        studentId: student?.student_id ?? "",
-        firstName: student?.first_name ?? "",
-        lastName: student?.last_name ?? "",
-        sectionName: student
-          ? (sectionById.get(student.section_id) ?? "Unknown section")
-          : "Unknown",
-        period: log.period,
-        timeIn: log.time_in,
-        timeOut: log.time_out,
-        date: log.date,
-      };
-    });
+    const result: AttendanceLogRow[] = [];
+
+    for (const student of students) {
+      const studentLogs = logsByStudent.get(student.id);
+      const sectionName =
+        sectionById.get(student.section_id) ?? "Unknown section";
+
+      if (!studentLogs || studentLogs.length === 0) {
+        // Student with no attendance logs — show a single empty row
+        result.push({
+          id: `no-log-${student.id}`,
+          studentId: student.student_id,
+          firstName: student.first_name,
+          lastName: student.last_name,
+          sectionName,
+          period: "",
+          timeIn: null,
+          timeOut: null,
+          date: "",
+        });
+      } else {
+        for (const log of studentLogs) {
+          result.push({
+            id: log.id,
+            studentId: student.student_id,
+            firstName: student.first_name,
+            lastName: student.last_name,
+            sectionName,
+            period: log.period,
+            timeIn: log.time_in,
+            timeOut: log.time_out,
+            date: log.date,
+          });
+        }
+      }
+    }
+
+    return result;
   }, [logs, sections, students]);
 
   const filteredRows = useMemo(() => {
+    let filtered = rows;
+
+    // Search filter
     const term = search.trim().toLowerCase();
-    if (!term) return rows;
-    return rows.filter((row) => {
-      const name = `${row.firstName} ${row.lastName}`.toLowerCase();
-      return name.includes(term) || row.studentId.toLowerCase().includes(term);
-    });
-  }, [rows, search]);
+    if (term) {
+      filtered = filtered.filter((row) => {
+        const name = `${row.firstName} ${row.lastName}`.toLowerCase();
+        return name.includes(term) || row.studentId.toLowerCase().includes(term);
+      });
+    }
+
+    // Day filter
+    if (selectedDay !== "all") {
+      filtered = filtered.filter(
+        (row) => row.date === selectedDay || row.date === "",
+      );
+    }
+
+    // Time-in filter (student-level across all days: partial counts as "with")
+    if (timeInFilter !== "all") {
+      const studentsWithTimeIn = new Set<string>();
+      for (const row of rows) {
+        if (row.timeIn !== null) {
+          studentsWithTimeIn.add(row.studentId);
+        }
+      }
+      if (timeInFilter === "with") {
+        filtered = filtered.filter((row) => studentsWithTimeIn.has(row.studentId));
+      } else {
+        filtered = filtered.filter((row) => !studentsWithTimeIn.has(row.studentId));
+      }
+    }
+
+    return filtered;
+  }, [rows, search, selectedDay, timeInFilter]);
 
   const totalPages = Math.max(
     1,
@@ -293,8 +377,10 @@ export default function AttendanceList() {
         : "—";
 
       const attended =
-        (morningRemarks !== "—" ? 1 : 0) +
-        (afternoonRemarks !== "—" ? 1 : 0);
+        (morning?.time_in ? 1 : 0) +
+        (morning?.time_out ? 1 : 0) +
+        (afternoon?.time_in ? 1 : 0) +
+        (afternoon?.time_out ? 1 : 0);
 
       const row = [
         toCsvValue(studentName),
@@ -307,7 +393,7 @@ export default function AttendanceList() {
         toCsvValue(formatTimeForCsv(afternoon?.time_in ?? null)),
         toCsvValue(formatTimeForCsv(afternoon?.time_out ?? null)),
         toCsvValue(afternoonRemarks),
-        toCsvValue(`${attended}/2`),
+        toCsvValue(`${attended}/4`),
       ];
 
       csvRows.push(row.join(","));
@@ -404,6 +490,116 @@ export default function AttendanceList() {
             </ListboxOptions>
           </div>
         </Listbox>
+        {eventDays.length > 0 && (
+          <Listbox
+            value={selectedDay}
+            onChange={(value) => {
+              setSelectedDay(value);
+              setCurrentPage(1);
+            }}
+          >
+            <div className="relative">
+              <ListboxButton className="relative w-full min-w-[120px] cursor-default rounded-md border border-zinc-200 bg-white py-2 pl-3 pr-8 text-left text-sm text-zinc-700 focus:outline-none focus:ring-1 focus:ring-emerald-300">
+                <span className="block truncate">
+                  {selectedDay === "all"
+                    ? "All days"
+                    : (eventDays.find((d) => d.date === selectedDay)?.label ??
+                      "All days")}
+                </span>
+                <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                  <svg
+                    className="h-4 w-4 text-zinc-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 9l4-4 4 4m0 6l-4 4-4-4"
+                    />
+                  </svg>
+                </span>
+              </ListboxButton>
+              <ListboxOptions className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border border-zinc-200 bg-white py-1 text-sm shadow-lg focus:outline-none">
+                <ListboxOption
+                  value="all"
+                  className="relative cursor-default select-none py-2 pl-3 pr-9 text-zinc-700 ui-selected:bg-emerald-50 ui-selected:text-emerald-900 ui-active:bg-zinc-100"
+                >
+                  <span className="block truncate font-normal">All days</span>
+                </ListboxOption>
+                {eventDays.map((day) => (
+                  <ListboxOption
+                    key={day.date}
+                    value={day.date}
+                    className="relative cursor-default select-none py-2 pl-3 pr-9 text-zinc-700 ui-selected:bg-emerald-50 ui-selected:text-emerald-900 ui-active:bg-zinc-100"
+                  >
+                    <span className="block truncate font-normal">
+                      {day.label}
+                    </span>
+                  </ListboxOption>
+                ))}
+              </ListboxOptions>
+            </div>
+          </Listbox>
+        )}
+        <Listbox
+          value={timeInFilter}
+          onChange={(value: "all" | "with" | "without") => {
+            setTimeInFilter(value);
+            setCurrentPage(1);
+          }}
+        >
+          <div className="relative">
+            <ListboxButton className="relative w-full min-w-[140px] cursor-default rounded-md border border-zinc-200 bg-white py-2 pl-3 pr-8 text-left text-sm text-zinc-700 focus:outline-none focus:ring-1 focus:ring-emerald-300">
+              <span className="block truncate">
+                {timeInFilter === "all"
+                  ? "All records"
+                  : timeInFilter === "with"
+                    ? "With Time In"
+                    : "Without Time In"}
+              </span>
+              <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                <svg
+                  className="h-4 w-4 text-zinc-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 9l4-4 4 4m0 6l-4 4-4-4"
+                  />
+                </svg>
+              </span>
+            </ListboxButton>
+            <ListboxOptions className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border border-zinc-200 bg-white py-1 text-sm shadow-lg focus:outline-none">
+              <ListboxOption
+                value="all"
+                className="relative cursor-default select-none py-2 pl-3 pr-9 text-zinc-700 ui-selected:bg-emerald-50 ui-selected:text-emerald-900 ui-active:bg-zinc-100"
+              >
+                <span className="block truncate font-normal">All records</span>
+              </ListboxOption>
+              <ListboxOption
+                value="with"
+                className="relative cursor-default select-none py-2 pl-3 pr-9 text-zinc-700 ui-selected:bg-emerald-50 ui-selected:text-emerald-900 ui-active:bg-zinc-100"
+              >
+                <span className="block truncate font-normal">With Time In</span>
+              </ListboxOption>
+              <ListboxOption
+                value="without"
+                className="relative cursor-default select-none py-2 pl-3 pr-9 text-zinc-700 ui-selected:bg-emerald-50 ui-selected:text-emerald-900 ui-active:bg-zinc-100"
+              >
+                <span className="block truncate font-normal">Without Time In</span>
+              </ListboxOption>
+            </ListboxOptions>
+          </div>
+        </Listbox>
         <button
           type="button"
           onClick={handleExtractRecords}
@@ -452,37 +648,53 @@ export default function AttendanceList() {
                   <p className="text-xs text-zinc-500">{row.studentId}</p>
                 </div>
                 <p>{row.sectionName}</p>
-                <p>{formatDate(row.date)}</p>
-                <p>
-                  <span
-                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                      row.period.toLowerCase() === "morning" || row.period.toLowerCase() === "am"
-                        ? "bg-amber-50 text-amber-700"
-                        : "bg-indigo-50 text-indigo-700"
-                    }`}
-                  >
-                    {periodLabel(row.period)}
-                  </span>
-                </p>
-                <p className={row.timeIn ? "text-emerald-700" : "text-zinc-400"}>
-                  {formatTime(row.timeIn)}
-                </p>
-                <p className={row.timeOut ? "text-emerald-700" : "text-zinc-400"}>
-                  {formatTime(row.timeOut)}
-                </p>
-                <p>
-                  {(() => {
-                    const remark = getRemarks(row.timeIn, row.timeOut);
-                    if (remark === "—") return <span className="text-zinc-400">—</span>;
-                    return (
+                {row.date ? (
+                  <>
+                    <p>{formatDate(row.date)}</p>
+                    <p>
                       <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${remarkStyle[remark]}`}
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                          row.period.toLowerCase() === "morning" || row.period.toLowerCase() === "am"
+                            ? "bg-amber-50 text-amber-700"
+                            : "bg-indigo-50 text-indigo-700"
+                        }`}
                       >
-                        {remark}
+                        {periodLabel(row.period)}
                       </span>
-                    );
-                  })()}
-                </p>
+                    </p>
+                    <p className={row.timeIn ? "text-emerald-700" : "text-zinc-400"}>
+                      {formatTime(row.timeIn)}
+                    </p>
+                    <p className={row.timeOut ? "text-emerald-700" : "text-zinc-400"}>
+                      {formatTime(row.timeOut)}
+                    </p>
+                    <p>
+                      {(() => {
+                        const remark = getRemarks(row.timeIn, row.timeOut);
+                        if (remark === "—") return <span className="text-zinc-400">—</span>;
+                        return (
+                          <span
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${remarkStyle[remark]}`}
+                          >
+                            {remark}
+                          </span>
+                        );
+                      })()}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-zinc-400">—</p>
+                    <p className="text-zinc-400">—</p>
+                    <p className="text-zinc-400">—</p>
+                    <p className="text-zinc-400">—</p>
+                    <p>
+                      <span className="inline-flex items-center rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-500">
+                        No Record
+                      </span>
+                    </p>
+                  </>
+                )}
               </div>
             ))
           )}

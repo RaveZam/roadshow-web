@@ -12,16 +12,13 @@ export async function syncOutbox() {
 
   for (const entry of pending) {
     try {
-      const { error } = await supabase.from("attendance_logs").upsert(
-        {
-          student_id: entry.student_id,
-          period: entry.period,
-          date: entry.date,
-          time_in: entry.time_in,
-          time_out: entry.time_out,
-        },
-        { onConflict: "student_id,date,period" },
-      );
+      const { error } = await supabase.rpc("upsert_attendance_log", {
+        p_student_id: entry.student_id,
+        p_period: entry.period,
+        p_date: entry.date,
+        p_time_in: entry.time_in,
+        p_time_out: entry.time_out,
+      });
 
       if (error) throw error;
 

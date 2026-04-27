@@ -2,10 +2,9 @@
 
 import {
   Bar,
+  BarChart,
   CartesianGrid,
-  ComposedChart,
   Legend,
-  Line,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -13,29 +12,35 @@ import {
 } from "recharts";
 import type { TrendRow } from "../types/master-types";
 
-type GroupedBarChartProps = {
-  rows: TrendRow[];
-};
+const BARS = [
+  { key: "morningIn", label: "Morning Check-In", color: "#059669" },
+  { key: "morningOut", label: "Morning Check-Out", color: "#6ee7b7" },
+  { key: "afternoonIn", label: "Afternoon Check-In", color: "#3b82f6" },
+  { key: "afternoonOut", label: "Afternoon Check-Out", color: "#93c5fd" },
+] as const;
 
-export default function GroupedBarChart({ rows }: GroupedBarChartProps) {
+export default function GroupedBarChart({ rows }: { rows: TrendRow[] }) {
   const data = rows.map((row) => ({
-    day: row.day,
-    checkedIn: row.checkedIn,
-    notCheckedIn: Math.max(row.totalStudents - row.checkedIn, 0),
+    day: row.label,
+    morningIn: row.morningIn,
+    morningOut: row.morningOut,
+    afternoonIn: row.afternoonIn,
+    afternoonOut: row.afternoonOut,
   }));
 
   return (
     <div className="h-72 w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart
+        <BarChart
           data={data}
-          barGap={6}
+          barGap={2}
+          barCategoryGap="20%"
           margin={{ top: 4, right: 8, left: 0, bottom: 0 }}
         >
           <CartesianGrid
             strokeDasharray="3 3"
             vertical={false}
-            stroke="#d1fae5"
+            stroke="#e4e4e7"
           />
           <XAxis
             dataKey="day"
@@ -49,32 +54,36 @@ export default function GroupedBarChart({ rows }: GroupedBarChartProps) {
             tickLine={false}
           />
           <Tooltip
-            contentStyle={{ borderRadius: 10, borderColor: "#34d399" }}
-            formatter={(value, name) => [
-              typeof value === "number" ? value.toLocaleString() : value,
-              name === "checkedIn" ? "Checked In" : "Not Checked In",
-            ]}
-            itemSorter={(item) => (item.name === "checkedIn" ? 0 : 1)}
+            contentStyle={{
+              borderRadius: 10,
+              borderColor: "#e4e4e7",
+              fontSize: 13,
+              boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+            }}
+            formatter={(value, name) => {
+              const bar = BARS.find((b) => b.key === name);
+              return [
+                typeof value === "number" ? value.toLocaleString() : value,
+                bar?.label ?? name,
+              ];
+            }}
           />
           <Legend
-            formatter={(value) =>
-              value === "checkedIn" ? "Checked In" : "Not Checked In"
-            }
-            wrapperStyle={{ fontSize: "12px" }}
+            formatter={(value: string) => {
+              const bar = BARS.find((b) => b.key === value);
+              return bar?.label ?? value;
+            }}
+            wrapperStyle={{ fontSize: "12px", paddingTop: 8 }}
           />
-          <Bar dataKey="checkedIn" fill="#059669" radius={[4, 4, 0, 0]} />
-          <Bar dataKey="notCheckedIn" fill="#6ee7b7" radius={[4, 4, 0, 0]} />
-          <Line
-            type="monotone"
-            dataKey="checkedIn"
-            stroke="#f59e0b"
-            strokeWidth={2}
-            dot={{ r: 4, fill: "#f59e0b" }}
-            activeDot={{ r: 6 }}
-            legendType="none"
-            tooltipType="none"
-          />
-        </ComposedChart>
+          {BARS.map((bar) => (
+            <Bar
+              key={bar.key}
+              dataKey={bar.key}
+              fill={bar.color}
+              radius={[4, 4, 0, 0]}
+            />
+          ))}
+        </BarChart>
       </ResponsiveContainer>
     </div>
   );
