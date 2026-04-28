@@ -237,6 +237,11 @@ export default function AttendanceList() {
   );
 
   const handleExtractRecords = async () => {
+    if (selectedSectionId === "all") {
+      setError("Please export attendance by sections.");
+      return;
+    }
+
     setIsExporting(true);
     setError("");
 
@@ -302,9 +307,11 @@ export default function AttendanceList() {
     ];
 
     const csvRows: string[] = [header.map(toCsvValue).join(",")];
+    const studentsWithLogs = new Set<string>();
 
     for (const [key, { morning, afternoon }] of grouped) {
       const [studentId, date] = key.split("|");
+      studentsWithLogs.add(studentId);
       const student = studentById.get(studentId);
       const studentName = student
         ? `${student.first_name} ${student.last_name}`.trim()
@@ -322,7 +329,10 @@ export default function AttendanceList() {
         : "—";
 
       const attended =
-        (morningRemarks !== "—" ? 1 : 0) + (afternoonRemarks !== "—" ? 1 : 0);
+        (morning?.time_in ? 1 : 0) +
+        (morning?.time_out ? 1 : 0) +
+        (afternoon?.time_in ? 1 : 0) +
+        (afternoon?.time_out ? 1 : 0);
 
       const row = [
         toCsvValue(studentName),
@@ -335,7 +345,30 @@ export default function AttendanceList() {
         toCsvValue(formatTimeForCsv(afternoon?.time_in ?? null)),
         toCsvValue(formatTimeForCsv(afternoon?.time_out ?? null)),
         toCsvValue(afternoonRemarks),
-        toCsvValue(`${attended}/2`),
+        `="${attended}/4"`,
+      ];
+
+      csvRows.push(row.join(","));
+    }
+
+    for (const student of exportStudents) {
+      if (studentsWithLogs.has(student.id)) continue;
+
+      const studentName = `${student.first_name} ${student.last_name}`.trim();
+      const sectionName = sectionById.get(student.section_id) ?? "Unknown";
+
+      const row = [
+        toCsvValue(studentName),
+        toCsvValue(student.student_id),
+        toCsvValue(sectionName),
+        toCsvValue(""),
+        toCsvValue(""),
+        toCsvValue(""),
+        toCsvValue("—"),
+        toCsvValue(""),
+        toCsvValue(""),
+        toCsvValue("—"),
+        `="0/4"`,
       ];
 
       csvRows.push(row.join(","));
