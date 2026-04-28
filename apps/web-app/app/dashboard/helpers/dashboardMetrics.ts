@@ -177,9 +177,12 @@ export function buildDashboardMetrics(
     const end = new Date(eventSettings.end_date + "T00:00:00");
     let dayNum = 1;
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
       dayOptions.push({
         label: `Day ${dayNum}`,
-        date: d.toISOString().slice(0, 10),
+        date: `${yyyy}-${mm}-${dd}`,
       });
       dayNum++;
     }

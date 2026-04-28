@@ -6,7 +6,8 @@
       "Bash(cd:*)",
       "Bash(npx tsc:*)",
       "Bash(git stash:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git push:*)"
     ]
   }
 }
